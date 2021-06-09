@@ -1,0 +1,793 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<!-- Basic Page Needs
+  –––––––––––––––––––––––––––––––––––––––––––––––––– -->
+<meta charset="utf-8"/>
+<title>tiling — Datashader 0.13.0 documentation</title>
+<meta content="Turns even the largest data into images, accurately." name="description"/>
+<meta content="Datashader contributors" name="author"/>
+<!-- Mobile Specific Metas
+  –––––––––––––––––––––––––––––––––––––––––––––––––– -->
+<meta content="width=device-width, initial-scale=1" name="viewport"/>
+<!-- FONT
+  –––––––––––––––––––––––––––––––––––––––––––––––––– -->
+<script src="https://ajax.googleapis.com/ajax/libs/webfont/1.6.16/webfont.js"></script>
+<script>
+    WebFont.load({
+      google: {
+        families: ['Source Sans Pro']
+      }
+    });
+  </script>
+<!-- CSS
+  –––––––––––––––––––––––––––––––––––––––––––––––––– -->
+<link href="_static/css/main.css" rel="stylesheet"/>
+<link href="_static/nbsite.css" rel="stylesheet"/>
+<!-- Scripts
+  –––––––––––––––––––––––––––––––––––––––––––––––––– -->
+<script src="//ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
+<script async="" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-MML-AM_CHTML" type="text/javascript">
+</script>
+<script src="_static/js/main.js"></script>
+<script src="_static/nbsite.js"></script>
+<script src="_static/require.js"></script>
+<!-- Favicon
+  –––––––––––––––––––––––––––––––––––––––––––––––––– -->
+<link href="_static/favicon.ico" rel="icon" type="image/png"/>
+<!-- Canonical
+  –––––––––––––––––––––––––––––––––––––––––––––––––– -->
+<link href="/tiling.html" rel="canonical">
+</link></head>
+<body class="">
+<header class="navigation">
+<div class="wrapper">
+<a class="logo" href="index.html">
+<img alt="Logo" src="_static/logo_horizontal.svg"/>
+</a>
+<a class="navigation-menu-button" href="javascript:void(0)" id="js-mobile-menu">Menu</a>
+<nav>
+<ul class="navigation-menu show" id="js-navigation-menu">
+<li class="nav-link doc-head"><a href="https://github.com/holoviz/datashader/">Github</a></li>
+<li class="nav-link doc-head"><a href="https://twitter.com/datashader/">Twitter</a></li>
+<li class="nav-link doc-head"><a href="https://discourse.holoviz.org/">Discourse</a></li>
+<li class="nav-link doc-head"><a href="https://holoviz.org">HoloViz</a></li>
+<li class="nav-link">
+<div style="display:inline-block;vertical-align: middle;">
+<div class="search-bar">
+<form action="search.html" method="get" role="search">
+<input name="q" placeholder="Search" type="search"/>
+<button type="submit">
+<img alt="Search Icon" src="https://raw.githubusercontent.com/thoughtbot/refills/master/source/images/search-icon-black.png"/>
+</button>
+</form>
+</div>
+</div>
+</li>
+</ul>
+</nav>
+</div>
+</header>
+<div class="second-nav">
+<nav>
+<ul class="navigation-menu show">
+<li class="nav-link doc-head"><a href="getting_started/index.html">Getting Started</a></li>
+<li class="nav-link doc-head"><a href="user_guide/index.html">User Guide</a></li>
+<li class="nav-link doc-head"><a href="topics/index.html">Topics</a></li>
+<li class="nav-link doc-head"><a href="api.html">API</a></li>
+<li class="nav-link doc-head"><a href="FAQ.html">FAQ</a></li>
+<li class="nav-link doc-head"><a href="about.html">About</a></li>
+</ul>
+</nav>
+</div>
+<!-- MAIN BODY OF DOCS –––––––––––––––––– -->
+<div class="docs section">
+<div id="hacketyhackhack"> <!-- style="width:20%;margin-right: 100px;"> --> <!--style="display: none;"> style="display:none;"> -->
+<div class="toc" style="width:15%; margin-right:20px;">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="index.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="getting_started/index.html">Getting Started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="user_guide/index.html">User Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="topics/index.html">Topics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api.html">API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="FAQ.html">FAQ</a></li>
+<li class="toctree-l1"><a class="reference internal" href="about.html">About</a></li>
+</ul>
+</div>
+</div>
+<div class="content"> <!-- style="max-width:80%;margin-left:auto;margin-right: auto;">-->
+<section id="tiling">
+<h1>tiling<a class="headerlink" href="#tiling" title="Permalink to this headline">¶</a></h1>
+<section id="building-tilesets-using-datashader">
+<h2>Building Tilesets using Datashader<a class="headerlink" href="#building-tilesets-using-datashader" title="Permalink to this headline">¶</a></h2>
+<p>Datashader provides <code class="docutils literal notranslate"><span class="pre">render_tiles</span></code> which is a utility function for creating tilesets from arbitrary datashader pipelines.</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">datashader.tiles</span> <span class="kn">import</span> <span class="n">render_tiles</span>
+</pre></div>
+</div>
+</div>
+</div>
+<p>A couple of notes about the tiling process:</p>
+<ul class="simple">
+<li><p>By default, uses a simple <code class="docutils literal notranslate"><span class="pre">Web</span> <span class="pre">Mercator</span> <span class="pre">Tiling</span> <span class="pre">Scheme</span> <span class="pre">(EPSG:3857)</span></code></p></li>
+<li><p>call <code class="docutils literal notranslate"><span class="pre">render_tiles</span></code> with the following arguments:</p></li>
+</ul>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">extent_of_area_i_want_to_tile</span> <span class="o">=</span> <span class="p">(</span><span class="o">-</span><span class="mi">500000</span><span class="p">,</span> <span class="o">-</span><span class="mi">500000</span><span class="p">,</span> <span class="mi">500000</span><span class="p">,</span> <span class="mi">500000</span><span class="p">)</span>  <span class="c1"># xmin, ymin, xmax, ymax</span>
+<span class="n">render_tiles</span><span class="p">(</span><span class="n">extent_of_data_i_want_to_handle</span><span class="p">,</span>
+             <span class="n">tile_levels</span><span class="o">=</span><span class="nb">range</span><span class="p">(</span><span class="mi">6</span><span class="p">),</span>
+             <span class="n">output_path</span><span class="o">=</span><span class="s1">'example_tileset_output_directory'</span><span class="p">,</span>
+             <span class="n">load_data_func</span><span class="o">=</span><span class="n">function_which_returns_dataframe</span><span class="p">,</span>
+             <span class="n">rasterize_func</span><span class="o">=</span><span class="n">function_which_creates_xarray_aggregate</span><span class="p">,</span>
+             <span class="n">shader_func</span><span class="o">=</span><span class="n">function_which_renders_aggregate_to_datashader_image</span><span class="p">,</span>
+             <span class="n">post_render_func</span><span class="o">=</span><span class="n">function_which_post_processes_image</span><span class="p">)</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>data representing x / y coordinates is assumed to be represented in meters (m) based on the Web Mercator coordinate system.</p></li>
+<li><p>the tiling extent is subdivided into <code class="docutils literal notranslate"><span class="pre">supertiles</span></code> generally of size <code class="docutils literal notranslate"><span class="pre">4096</span> <span class="pre">x</span> <span class="pre">4096</span></code></p></li>
+<li><p>the <code class="docutils literal notranslate"><span class="pre">load_data_func</span></code> returns a dataframe-like object and contains your data access specific code.</p></li>
+<li><p>the <code class="docutils literal notranslate"><span class="pre">rasterize_func</span></code> returns a <code class="docutils literal notranslate"><span class="pre">xr.DataArray</span></code> and contains your xarray specific code.</p></li>
+<li><p>the <code class="docutils literal notranslate"><span class="pre">shader_func</span></code> returns a <code class="docutils literal notranslate"><span class="pre">ds.Image</span></code> and contains your datashader specific code.</p></li>
+<li><p>the <code class="docutils literal notranslate"><span class="pre">post_render_func</span></code> is called once for each final tile (<code class="docutils literal notranslate"><span class="pre">default</span> <span class="pre">256</span> <span class="pre">x</span> <span class="pre">256</span></code>) and contains PIL (Python Imaging Library) specific code.  This is the hook for adding additional filters, text, watermarks, etc. to output tiles.</p></li>
+</ul>
+</section>
+<section id="creating-tile-component-functions">
+<h2>Creating Tile Component Functions<a class="headerlink" href="#creating-tile-component-functions" title="Permalink to this headline">¶</a></h2>
+<section id="create-load-data-func">
+<h3>Create <code class="docutils literal notranslate"><span class="pre">load_data_func</span></code><a class="headerlink" href="#create-load-data-func" title="Permalink to this headline">¶</a></h3>
+<ul class="simple">
+<li><p>accepts <code class="docutils literal notranslate"><span class="pre">x_range</span></code> and <code class="docutils literal notranslate"><span class="pre">y_range</span></code> arguments which correspond to the ranges of the supertile being rendered.</p></li>
+<li><p>returns a dataframe-like object (pd.Dataframe / dask.Dataframe)</p></li>
+<li><p>this example <code class="docutils literal notranslate"><span class="pre">load_data_func</span></code> creates a pandas dataframe with <code class="docutils literal notranslate"><span class="pre">x</span></code> and <code class="docutils literal notranslate"><span class="pre">y</span></code> fields sampled from a wald distribution</p></li>
+</ul>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+
+<span class="n">df</span> <span class="o">=</span> <span class="kc">None</span>
+<span class="k">def</span> <span class="nf">load_data_func</span><span class="p">(</span><span class="n">x_range</span><span class="p">,</span> <span class="n">y_range</span><span class="p">):</span>
+    <span class="k">global</span> <span class="n">df</span>
+    <span class="k">if</span> <span class="n">df</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">xoffsets</span> <span class="o">=</span> <span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span>
+        <span class="n">yoffsets</span> <span class="o">=</span> <span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+        <span class="n">xs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">([</span><span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">wald</span><span class="p">(</span><span class="mi">10000000</span><span class="p">,</span> <span class="mi">10000000</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="mi">10000000</span><span class="p">)</span> <span class="o">*</span> <span class="n">offset</span> <span class="k">for</span> <span class="n">offset</span> <span class="ow">in</span> <span class="n">xoffsets</span><span class="p">])</span>
+        <span class="n">ys</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">([</span><span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">wald</span><span class="p">(</span><span class="mi">10000000</span><span class="p">,</span> <span class="mi">10000000</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="mi">10000000</span><span class="p">)</span> <span class="o">*</span> <span class="n">offset</span> <span class="k">for</span> <span class="n">offset</span> <span class="ow">in</span> <span class="n">yoffsets</span><span class="p">])</span>
+        <span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="nb">dict</span><span class="p">(</span><span class="n">x</span><span class="o">=</span><span class="n">xs</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="n">ys</span><span class="p">))</span>
+    
+    <span class="k">return</span> <span class="n">df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">df</span><span class="p">[</span><span class="s1">'x'</span><span class="p">]</span><span class="o">.</span><span class="n">between</span><span class="p">(</span><span class="o">*</span><span class="n">x_range</span><span class="p">)</span> <span class="o">&amp;</span> <span class="n">df</span><span class="p">[</span><span class="s1">'y'</span><span class="p">]</span><span class="o">.</span><span class="n">between</span><span class="p">(</span><span class="o">*</span><span class="n">y_range</span><span class="p">)]</span>
+</pre></div>
+</div>
+</div>
+</div>
+</section>
+<section id="create-rasterize-func">
+<h3>Create <code class="docutils literal notranslate"><span class="pre">rasterize_func</span></code><a class="headerlink" href="#create-rasterize-func" title="Permalink to this headline">¶</a></h3>
+<ul class="simple">
+<li><p>accepts <code class="docutils literal notranslate"><span class="pre">df</span></code>, <code class="docutils literal notranslate"><span class="pre">x_range</span></code>, <code class="docutils literal notranslate"><span class="pre">y_range</span></code>, <code class="docutils literal notranslate"><span class="pre">height</span></code>, <code class="docutils literal notranslate"><span class="pre">width</span></code> arguments which correspond to the data, ranges, and plot dimensions of the supertile being rendered.</p></li>
+<li><p>returns an <code class="docutils literal notranslate"><span class="pre">xr.DataArray</span></code> object representing the aggregate.</p></li>
+</ul>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">datashader</span> <span class="k">as</span> <span class="nn">ds</span>
+
+<span class="k">def</span> <span class="nf">rasterize_func</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">x_range</span><span class="p">,</span> <span class="n">y_range</span><span class="p">,</span> <span class="n">height</span><span class="p">,</span> <span class="n">width</span><span class="p">):</span>
+    <span class="c1"># aggregate</span>
+    <span class="n">cvs</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">Canvas</span><span class="p">(</span><span class="n">x_range</span><span class="o">=</span><span class="n">x_range</span><span class="p">,</span> <span class="n">y_range</span><span class="o">=</span><span class="n">y_range</span><span class="p">,</span>
+                    <span class="n">plot_height</span><span class="o">=</span><span class="n">height</span><span class="p">,</span> <span class="n">plot_width</span><span class="o">=</span><span class="n">width</span><span class="p">)</span>
+    <span class="n">agg</span> <span class="o">=</span> <span class="n">cvs</span><span class="o">.</span><span class="n">points</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="s1">'x'</span><span class="p">,</span> <span class="s1">'y'</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">agg</span>
+</pre></div>
+</div>
+</div>
+</div>
+</section>
+<section id="create-shader-func">
+<h3>Create <code class="docutils literal notranslate"><span class="pre">shader_func</span></code><a class="headerlink" href="#create-shader-func" title="Permalink to this headline">¶</a></h3>
+<ul class="simple">
+<li><p>accepts <code class="docutils literal notranslate"><span class="pre">agg</span> <span class="pre">(xr.DataArray)</span></code>, <code class="docutils literal notranslate"><span class="pre">span</span> <span class="pre">(tuple(min,</span> <span class="pre">max))</span></code>.  The span argument can be used to control color mapping / auto-ranging across supertiles.</p></li>
+<li><p>returns an <code class="docutils literal notranslate"><span class="pre">ds.Image</span></code> object representing the shaded image.</p></li>
+</ul>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">datashader.transfer_functions</span> <span class="k">as</span> <span class="nn">tf</span>
+<span class="kn">from</span> <span class="nn">datashader.colors</span> <span class="kn">import</span> <span class="n">viridis</span>
+
+<span class="k">def</span> <span class="nf">shader_func</span><span class="p">(</span><span class="n">agg</span><span class="p">,</span> <span class="n">span</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="n">img</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">shade</span><span class="p">(</span><span class="n">agg</span><span class="p">,</span> <span class="n">cmap</span><span class="o">=</span><span class="nb">reversed</span><span class="p">(</span><span class="n">viridis</span><span class="p">),</span> <span class="n">span</span><span class="o">=</span><span class="n">span</span><span class="p">,</span> <span class="n">how</span><span class="o">=</span><span class="s1">'log'</span><span class="p">)</span>
+    <span class="n">img</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">set_background</span><span class="p">(</span><span class="n">img</span><span class="p">,</span> <span class="s1">'black'</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">img</span>
+</pre></div>
+</div>
+</div>
+</div>
+</section>
+<section id="create-post-render-func">
+<h3>Create <code class="docutils literal notranslate"><span class="pre">post_render_func</span></code><a class="headerlink" href="#create-post-render-func" title="Permalink to this headline">¶</a></h3>
+<ul class="simple">
+<li><p>accepts <code class="docutils literal notranslate"><span class="pre">img</span> </code>, <code class="docutils literal notranslate"><span class="pre">extras</span></code> arguments which correspond to the output PIL.Image before it is write to disk (or S3), and addtional image properties.</p></li>
+<li><p>returns image <code class="docutils literal notranslate"><span class="pre">(PIL.Image)</span></code></p></li>
+<li><p>this is a good place to run any non-datashader-specific logic on each output tile.</p></li>
+</ul>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">PIL</span> <span class="kn">import</span> <span class="n">ImageDraw</span>
+
+<span class="k">def</span> <span class="nf">post_render_func</span><span class="p">(</span><span class="n">img</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="n">info</span> <span class="o">=</span> <span class="s2">"x=</span><span class="si">{}</span><span class="s2">,y=</span><span class="si">{}</span><span class="s2">,z=</span><span class="si">{}</span><span class="s2">"</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">kwargs</span><span class="p">[</span><span class="s1">'x'</span><span class="p">],</span> <span class="n">kwargs</span><span class="p">[</span><span class="s1">'y'</span><span class="p">],</span> <span class="n">kwargs</span><span class="p">[</span><span class="s1">'z'</span><span class="p">])</span>
+    <span class="n">draw</span> <span class="o">=</span> <span class="n">ImageDraw</span><span class="o">.</span><span class="n">Draw</span><span class="p">(</span><span class="n">img</span><span class="p">)</span>
+    <span class="n">draw</span><span class="o">.</span><span class="n">text</span><span class="p">((</span><span class="mi">5</span><span class="p">,</span> <span class="mi">5</span><span class="p">),</span> <span class="n">info</span><span class="p">,</span> <span class="n">fill</span><span class="o">=</span><span class="s1">'rgb(255, 255, 255)'</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">img</span>
+</pre></div>
+</div>
+</div>
+</div>
+</section>
+</section>
+<section id="render-tiles-to-local-filesystem">
+<h2>Render tiles to local filesystem<a class="headerlink" href="#render-tiles-to-local-filesystem" title="Permalink to this headline">¶</a></h2>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">full_extent_of_data</span> <span class="o">=</span> <span class="p">(</span><span class="o">-</span><span class="mi">500000</span><span class="p">,</span> <span class="o">-</span><span class="mi">500000</span><span class="p">,</span> <span class="mi">500000</span><span class="p">,</span> <span class="mi">500000</span><span class="p">)</span>
+<span class="n">output_path</span> <span class="o">=</span> <span class="s1">'tiles_output_directory/wald_tiles'</span>
+<span class="n">results</span> <span class="o">=</span> <span class="n">render_tiles</span><span class="p">(</span><span class="n">full_extent_of_data</span><span class="p">,</span>
+                       <span class="nb">range</span><span class="p">(</span><span class="mi">3</span><span class="p">),</span>
+                       <span class="n">load_data_func</span><span class="o">=</span><span class="n">load_data_func</span><span class="p">,</span>
+                       <span class="n">rasterize_func</span><span class="o">=</span><span class="n">rasterize_func</span><span class="p">,</span>
+                       <span class="n">shader_func</span><span class="o">=</span><span class="n">shader_func</span><span class="p">,</span>
+                       <span class="n">post_render_func</span><span class="o">=</span><span class="n">post_render_func</span><span class="p">,</span>
+                       <span class="n">output_path</span><span class="o">=</span><span class="n">output_path</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>calculating statistics for level 0
+rendering 1 supertiles for zoom level 0 with span=(0, 2939)
+calculating statistics for level 1
+rendering 1 supertiles for zoom level 1 with span=(0, 770)
+calculating statistics for level 2
+rendering 1 supertiles for zoom level 2 with span=(0, 218)
+</pre></div>
+</div>
+</div>
+</div>
+<section id="preview-the-tileset-using-bokeh">
+<h3>Preview the tileset using Bokeh<a class="headerlink" href="#preview-the-tileset-using-bokeh" title="Permalink to this headline">¶</a></h3>
+<ul class="simple">
+<li><p>Browse to the tile output directory and start an http server:</p></li>
+</ul>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$&gt; <span class="nb">cd</span> test_tiles_output
+$&gt; python -m http.server
+
+Starting up http-server, serving ./
+Available on:
+  http://127.0.0.1:8080
+  http://192.168.1.7:8080
+Hit CTRL-C to stop the server
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>build a <code class="docutils literal notranslate"><span class="pre">bokeh.plotting.Figure</span></code></p></li>
+</ul>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">bokeh.plotting</span> <span class="kn">import</span> <span class="n">figure</span>
+<span class="kn">from</span> <span class="nn">bokeh.models.tiles</span> <span class="kn">import</span> <span class="n">WMTSTileSource</span>
+<span class="kn">from</span> <span class="nn">bokeh.io</span> <span class="kn">import</span> <span class="n">show</span>
+<span class="kn">from</span> <span class="nn">bokeh.io</span> <span class="kn">import</span> <span class="n">output_notebook</span>
+
+<span class="n">output_notebook</span><span class="p">()</span>
+
+<span class="n">xmin</span><span class="p">,</span> <span class="n">ymin</span><span class="p">,</span> <span class="n">xmax</span><span class="p">,</span> <span class="n">ymax</span> <span class="o">=</span> <span class="n">full_extent_of_data</span>
+
+<span class="n">p</span> <span class="o">=</span> <span class="n">figure</span><span class="p">(</span><span class="n">width</span><span class="o">=</span><span class="mi">800</span><span class="p">,</span> <span class="n">height</span><span class="o">=</span><span class="mi">800</span><span class="p">,</span> 
+           <span class="n">x_range</span><span class="o">=</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="o">-</span><span class="mf">20e6</span><span class="p">),</span> <span class="nb">int</span><span class="p">(</span><span class="mf">20e6</span><span class="p">)),</span>
+           <span class="n">y_range</span><span class="o">=</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="o">-</span><span class="mf">20e6</span><span class="p">),</span> <span class="nb">int</span><span class="p">(</span><span class="mf">20e6</span><span class="p">)),</span>
+           <span class="n">tools</span><span class="o">=</span><span class="s2">"pan,wheel_zoom,reset"</span><span class="p">)</span>
+
+<span class="n">p</span><span class="o">.</span><span class="n">background_fill_color</span> <span class="o">=</span> <span class="s1">'black'</span>
+<span class="n">p</span><span class="o">.</span><span class="n">grid</span><span class="o">.</span><span class="n">grid_line_alpha</span> <span class="o">=</span> <span class="mi">0</span>
+<span class="n">p</span><span class="o">.</span><span class="n">axis</span><span class="o">.</span><span class="n">visible</span> <span class="o">=</span> <span class="kc">False</span>
+<span class="n">p</span><span class="o">.</span><span class="n">add_tile</span><span class="p">(</span><span class="n">WMTSTileSource</span><span class="p">(</span><span class="n">url</span><span class="o">=</span><span class="s2">"http://localhost:8080/</span><span class="si">{Z}</span><span class="s2">/</span><span class="si">{X}</span><span class="s2">/</span><span class="si">{Y}</span><span class="s2">.png"</span><span class="p">),</span>
+          <span class="n">render_parents</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<span class="n">show</span><span class="p">(</span><span class="n">p</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_html">
+<div class="bk-root">
+<a class="bk-logo bk-logo-small bk-logo-notebook" href="https://bokeh.org" target="_blank"></a>
+<span id="1002">Loading BokehJS ...</span>
+</div></div><script type="application/javascript">
+(function(root) {
+  function now() {
+    return new Date();
+  }
+
+  var force = true;
+
+  if (typeof root._bokeh_onload_callbacks === "undefined" || force === true) {
+    root._bokeh_onload_callbacks = [];
+    root._bokeh_is_loading = undefined;
+  }
+
+  var JS_MIME_TYPE = 'application/javascript';
+  var HTML_MIME_TYPE = 'text/html';
+  var EXEC_MIME_TYPE = 'application/vnd.bokehjs_exec.v0+json';
+  var CLASS_NAME = 'output_bokeh rendered_html';
+
+  /**
+   * Render data to the DOM node
+   */
+  function render(props, node) {
+    var script = document.createElement("script");
+    node.appendChild(script);
+  }
+
+  /**
+   * Handle when an output is cleared or removed
+   */
+  function handleClearOutput(event, handle) {
+    var cell = handle.cell;
+
+    var id = cell.output_area._bokeh_element_id;
+    var server_id = cell.output_area._bokeh_server_id;
+    // Clean up Bokeh references
+    if (id != null && id in Bokeh.index) {
+      Bokeh.index[id].model.document.clear();
+      delete Bokeh.index[id];
+    }
+
+    if (server_id !== undefined) {
+      // Clean up Bokeh references
+      var cmd = "from bokeh.io.state import curstate; print(curstate().uuid_to_server['" + server_id + "'].get_sessions()[0].document.roots[0]._id)";
+      cell.notebook.kernel.execute(cmd, {
+        iopub: {
+          output: function(msg) {
+            var id = msg.content.text.trim();
+            if (id in Bokeh.index) {
+              Bokeh.index[id].model.document.clear();
+              delete Bokeh.index[id];
+            }
+          }
+        }
+      });
+      // Destroy server and session
+      var cmd = "import bokeh.io.notebook as ion; ion.destroy_server('" + server_id + "')";
+      cell.notebook.kernel.execute(cmd);
+    }
+  }
+
+  /**
+   * Handle when a new output is added
+   */
+  function handleAddOutput(event, handle) {
+    var output_area = handle.output_area;
+    var output = handle.output;
+
+    // limit handleAddOutput to display_data with EXEC_MIME_TYPE content only
+    if ((output.output_type != "display_data") || (!Object.prototype.hasOwnProperty.call(output.data, EXEC_MIME_TYPE))) {
+      return
+    }
+
+    var toinsert = output_area.element.find("." + CLASS_NAME.split(' ')[0]);
+
+    if (output.metadata[EXEC_MIME_TYPE]["id"] !== undefined) {
+      toinsert[toinsert.length - 1].firstChild.textContent = output.data[JS_MIME_TYPE];
+      // store reference to embed id on output_area
+      output_area._bokeh_element_id = output.metadata[EXEC_MIME_TYPE]["id"];
+    }
+    if (output.metadata[EXEC_MIME_TYPE]["server_id"] !== undefined) {
+      var bk_div = document.createElement("div");
+      bk_div.innerHTML = output.data[HTML_MIME_TYPE];
+      var script_attrs = bk_div.children[0].attributes;
+      for (var i = 0; i < script_attrs.length; i++) {
+        toinsert[toinsert.length - 1].firstChild.setAttribute(script_attrs[i].name, script_attrs[i].value);
+        toinsert[toinsert.length - 1].firstChild.textContent = bk_div.children[0].textContent
+      }
+      // store reference to server id on output_area
+      output_area._bokeh_server_id = output.metadata[EXEC_MIME_TYPE]["server_id"];
+    }
+  }
+
+  function register_renderer(events, OutputArea) {
+
+    function append_mime(data, metadata, element) {
+      // create a DOM node to render to
+      var toinsert = this.create_output_subarea(
+        metadata,
+        CLASS_NAME,
+        EXEC_MIME_TYPE
+      );
+      this.keyboard_manager.register_events(toinsert);
+      // Render to node
+      var props = {data: data, metadata: metadata[EXEC_MIME_TYPE]};
+      render(props, toinsert[toinsert.length - 1]);
+      element.append(toinsert);
+      return toinsert
+    }
+
+    /* Handle when an output is cleared or removed */
+    events.on('clear_output.CodeCell', handleClearOutput);
+    events.on('delete.Cell', handleClearOutput);
+
+    /* Handle when a new output is added */
+    events.on('output_added.OutputArea', handleAddOutput);
+
+    /**
+     * Register the mime type and append_mime function with output_area
+     */
+    OutputArea.prototype.register_mime_type(EXEC_MIME_TYPE, append_mime, {
+      /* Is output safe? */
+      safe: true,
+      /* Index of renderer in `output_area.display_order` */
+      index: 0
+    });
+  }
+
+  // register the mime type if in Jupyter Notebook environment and previously unregistered
+  if (root.Jupyter !== undefined) {
+    var events = require('base/js/events');
+    var OutputArea = require('notebook/js/outputarea').OutputArea;
+
+    if (OutputArea.prototype.mime_types().indexOf(EXEC_MIME_TYPE) == -1) {
+      register_renderer(events, OutputArea);
+    }
+  }
+
+  
+  if (typeof (root._bokeh_timeout) === "undefined" || force === true) {
+    root._bokeh_timeout = Date.now() + 5000;
+    root._bokeh_failed_load = false;
+  }
+
+  var NB_LOAD_WARNING = {'data': {'text/html':
+     "<div style='background-color: #fdd'>\n"+
+     "<p>\n"+
+     "BokehJS does not appear to have successfully loaded. If loading BokehJS from CDN, this \n"+
+     "may be due to a slow or bad network connection. Possible fixes:\n"+
+     "</p>\n"+
+     "<ul>\n"+
+     "<li>re-rerun `output_notebook()` to attempt to load from CDN again, or</li>\n"+
+     "<li>use INLINE resources instead, as so:</li>\n"+
+     "</ul>\n"+
+     "<code>\n"+
+     "from bokeh.resources import INLINE\n"+
+     "output_notebook(resources=INLINE)\n"+
+     "</code>\n"+
+     "</div>"}};
+
+  function display_loaded() {
+    var el = document.getElementById("1002");
+    if (el != null) {
+      el.textContent = "BokehJS is loading...";
+    }
+    if (root.Bokeh !== undefined) {
+      if (el != null) {
+        el.textContent = "BokehJS " + root.Bokeh.version + " successfully loaded.";
+      }
+    } else if (Date.now() < root._bokeh_timeout) {
+      setTimeout(display_loaded, 100)
+    }
+  }
+
+
+  function run_callbacks() {
+    try {
+      root._bokeh_onload_callbacks.forEach(function(callback) {
+        if (callback != null)
+          callback();
+      });
+    } finally {
+      delete root._bokeh_onload_callbacks
+    }
+    console.debug("Bokeh: all callbacks have finished");
+  }
+
+  function load_libs(css_urls, js_urls, callback) {
+    if (css_urls == null) css_urls = [];
+    if (js_urls == null) js_urls = [];
+
+    root._bokeh_onload_callbacks.push(callback);
+    if (root._bokeh_is_loading > 0) {
+      console.debug("Bokeh: BokehJS is being loaded, scheduling callback at", now());
+      return null;
+    }
+    if (js_urls == null || js_urls.length === 0) {
+      run_callbacks();
+      return null;
+    }
+    console.debug("Bokeh: BokehJS not loaded, scheduling load and callback at", now());
+    root._bokeh_is_loading = css_urls.length + js_urls.length;
+
+    function on_load() {
+      root._bokeh_is_loading--;
+      if (root._bokeh_is_loading === 0) {
+        console.debug("Bokeh: all BokehJS libraries/stylesheets loaded");
+        run_callbacks()
+      }
+    }
+
+    function on_error(url) {
+      console.error("failed to load " + url);
+    }
+
+    for (let i = 0; i < css_urls.length; i++) {
+      const url = css_urls[i];
+      const element = document.createElement("link");
+      element.onload = on_load;
+      element.onerror = on_error.bind(null, url);
+      element.rel = "stylesheet";
+      element.type = "text/css";
+      element.href = url;
+      console.debug("Bokeh: injecting link tag for BokehJS stylesheet: ", url);
+      document.body.appendChild(element);
+    }
+
+    const hashes = {"https://cdn.bokeh.org/bokeh/release/bokeh-2.3.2.min.js": "XypntL49z55iwGVUW4qsEu83zKL3XEcz0MjuGOQ9SlaaQ68X/g+k1FcioZi7oQAc", "https://cdn.bokeh.org/bokeh/release/bokeh-tables-2.3.2.min.js": "bEsM86IHGDTLCS0Zod8a8WM6Y4+lafAL/eSiyQcuPzinmWNgNO2/olUF0Z2Dkn5i", "https://cdn.bokeh.org/bokeh/release/bokeh-widgets-2.3.2.min.js": "TX0gSQTdXTTeScqxj6PVQxTiRW8DOoGVwinyi1D3kxv7wuxQ02XkOxv0xwiypcAH"};
+
+    for (let i = 0; i < js_urls.length; i++) {
+      const url = js_urls[i];
+      const element = document.createElement('script');
+      element.onload = on_load;
+      element.onerror = on_error.bind(null, url);
+      element.async = false;
+      element.src = url;
+      if (url in hashes) {
+        element.crossOrigin = "anonymous";
+        element.integrity = "sha384-" + hashes[url];
+      }
+      console.debug("Bokeh: injecting script tag for BokehJS library: ", url);
+      document.head.appendChild(element);
+    }
+  };
+
+  function inject_raw_css(css) {
+    const element = document.createElement("style");
+    element.appendChild(document.createTextNode(css));
+    document.body.appendChild(element);
+  }
+
+  
+  var js_urls = ["https://unpkg.com/tabulator-tables@4.9.3/dist/js/tabulator.js", "https://unpkg.com/moment@2.27.0/moment.js", "https://cdn.bokeh.org/bokeh/release/bokeh-2.3.2.min.js", "https://cdn.bokeh.org/bokeh/release/bokeh-widgets-2.3.2.min.js", "https://cdn.bokeh.org/bokeh/release/bokeh-tables-2.3.2.min.js", "https://unpkg.com/@holoviz/panel@^0.12.0-a.14/dist/panel.min.js"];
+  var css_urls = ["https://unpkg.com/tabulator-tables@4.9.3/dist/css/tabulator_simple.min.css"];
+  
+
+  var inline_js = [
+    function(Bokeh) {
+      Bokeh.set_log_level("info");
+    },
+    function(Bokeh) {
+    
+    
+    }
+  ];
+
+  function run_inline_js() {
+    
+    if (root.Bokeh !== undefined || force === true) {
+      
+    for (var i = 0; i < inline_js.length; i++) {
+      inline_js[i].call(root, root.Bokeh);
+    }
+    if (force === true) {
+        display_loaded();
+      }} else if (Date.now() < root._bokeh_timeout) {
+      setTimeout(run_inline_js, 100);
+    } else if (!root._bokeh_failed_load) {
+      console.log("Bokeh: BokehJS failed to load within specified timeout.");
+      root._bokeh_failed_load = true;
+    } else if (force !== true) {
+      var cell = $(document.getElementById("1002")).parents('.cell').data().cell;
+      cell.output_area.append_execute_result(NB_LOAD_WARNING)
+    }
+
+  }
+
+  if (root._bokeh_is_loading === 0) {
+    console.debug("Bokeh: BokehJS loaded, going straight to plotting");
+    run_inline_js();
+  } else {
+    load_libs(css_urls, js_urls, function() {
+      console.debug("Bokeh: BokehJS plotting callback run at", now());
+      run_inline_js();
+    });
+  }
+}(window));</script><div class="output text_html">
+<div class="bk-root" data-root-id="1003" id="150db72d-0a2b-442c-b776-efe64025ff46"></div>
+</div><script type="application/javascript">(function(root) {
+  function embed_document(root) {
+    
+  var docs_json = {"3a2d9b8e-e16a-4b0b-9672-b714925d4ad9":{"defs":[{"extends":null,"module":null,"name":"ReactiveHTML1","overrides":[],"properties":[]},{"extends":null,"module":null,"name":"FlexBox1","overrides":[],"properties":[{"default":"flex-start","kind":null,"name":"align_content"},{"default":"flex-start","kind":null,"name":"align_items"},{"default":"row","kind":null,"name":"flex_direction"},{"default":"wrap","kind":null,"name":"flex_wrap"},{"default":"flex-start","kind":null,"name":"justify_content"}]},{"extends":null,"module":null,"name":"TemplateActions1","overrides":[],"properties":[{"default":0,"kind":null,"name":"open_modal"},{"default":0,"kind":null,"name":"close_modal"}]},{"extends":null,"module":null,"name":"MaterialTemplateActions1","overrides":[],"properties":[{"default":0,"kind":null,"name":"open_modal"},{"default":0,"kind":null,"name":"close_modal"}]}],"roots":{"references":[{"attributes":{"background_fill_color":"black","below":[{"id":"1012"}],"center":[{"id":"1015"},{"id":"1019"}],"height":800,"left":[{"id":"1016"}],"renderers":[{"id":"1028"}],"title":{"id":"1030"},"toolbar":{"id":"1023"},"width":800,"x_range":{"id":"1004"},"x_scale":{"id":"1008"},"y_range":{"id":"1006"},"y_scale":{"id":"1010"}},"id":"1003","subtype":"Figure","type":"Plot"},{"attributes":{},"id":"1013","type":"BasicTicker"},{"attributes":{},"id":"1020","type":"PanTool"},{"attributes":{},"id":"1030","type":"Title"},{"attributes":{"end":20000000,"start":-20000000},"id":"1006","type":"Range1d"},{"attributes":{"formatter":{"id":"1033"},"major_label_policy":{"id":"1034"},"ticker":{"id":"1013"},"visible":false},"id":"1012","type":"LinearAxis"},{"attributes":{"end":20000000,"start":-20000000},"id":"1004","type":"Range1d"},{"attributes":{"axis":{"id":"1012"},"grid_line_alpha":0,"ticker":null},"id":"1015","type":"Grid"},{"attributes":{"formatter":{"id":"1036"},"major_label_policy":{"id":"1037"},"ticker":{"id":"1017"},"visible":false},"id":"1016","type":"LinearAxis"},{"attributes":{},"id":"1033","type":"BasicTickFormatter"},{"attributes":{},"id":"1037","type":"AllLabels"},{"attributes":{},"id":"1017","type":"BasicTicker"},{"attributes":{"axis":{"id":"1016"},"dimension":1,"grid_line_alpha":0,"ticker":null},"id":"1019","type":"Grid"},{"attributes":{"active_multi":null,"tools":[{"id":"1020"},{"id":"1021"},{"id":"1022"}]},"id":"1023","type":"Toolbar"},{"attributes":{},"id":"1034","type":"AllLabels"},{"attributes":{},"id":"1021","type":"WheelZoomTool"},{"attributes":{"url":"http://localhost:8080/{Z}/{X}/{Y}.png"},"id":"1027","type":"WMTSTileSource"},{"attributes":{},"id":"1022","type":"ResetTool"},{"attributes":{},"id":"1008","type":"LinearScale"},{"attributes":{"render_parents":false,"tile_source":{"id":"1027"}},"id":"1028","type":"TileRenderer"},{"attributes":{},"id":"1010","type":"LinearScale"},{"attributes":{},"id":"1036","type":"BasicTickFormatter"}],"root_ids":["1003"]},"title":"Bokeh Application","version":"2.3.2"}};
+  var render_items = [{"docid":"3a2d9b8e-e16a-4b0b-9672-b714925d4ad9","root_ids":["1003"],"roots":{"1003":"150db72d-0a2b-442c-b776-efe64025ff46"}}];
+  root.Bokeh.embed.embed_items_notebook(docs_json, render_items);
+
+  }
+  if (root.Bokeh !== undefined) {
+    embed_document(root);
+  } else {
+    var attempts = 0;
+    var timer = setInterval(function(root) {
+      if (root.Bokeh !== undefined) {
+        clearInterval(timer);
+        embed_document(root);
+      } else {
+        attempts++;
+        if (attempts > 100) {
+          clearInterval(timer);
+          console.log("Bokeh: ERROR: Unable to run BokehJS code because BokehJS library is missing");
+        }
+      }
+    }, 10, root)
+  }
+})(window);</script></div>
+</div>
+</section>
+</section>
+<section id="render-tiles-to-amazon-simple-storage-service-s3">
+<h2>Render tiles to Amazon Simple Storage Service (S3)<a class="headerlink" href="#render-tiles-to-amazon-simple-storage-service-s3" title="Permalink to this headline">¶</a></h2>
+<p>To render tiles directly to S3, you only need to use the <code class="docutils literal notranslate"><span class="pre">s3://</span></code> protocol in your <code class="docutils literal notranslate"><span class="pre">output_path</span></code> argument</p>
+<ul class="simple">
+<li><p>Requires AWS Access / Secret Keys with appropriate IAM permissions for uploading to S3.</p></li>
+<li><p>Requires extra <code class="docutils literal notranslate"><span class="pre">boto3</span></code> dependency:</p></li>
+</ul>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>conda install boto3
+</pre></div>
+</div>
+<section id="configuring-credentials">
+<h3>Configuring credentials<a class="headerlink" href="#configuring-credentials" title="Permalink to this headline">¶</a></h3>
+<ul class="simple">
+<li><p>Quoting <a class="reference external" href="https://boto3.readthedocs.io/en/latest/guide/configuration.html"><code class="docutils literal notranslate"><span class="pre">boto3</span> <span class="pre">documentation</span> <span class="pre">regarding</span> <span class="pre">credential</span> <span class="pre">handling</span></code></a>:</p></li>
+</ul>
+<blockquote>
+<div><p>The mechanism in which boto3 looks for credentials is to search through a list of possible locations and stop as soon as it finds credentials. The order in which Boto3 searches for credentials is:</p>
+</div></blockquote>
+<ol class="simple">
+<li><p>~~Passing credentials as parameters in the boto.client() method~~</p></li>
+</ol>
+<ul class="simple">
+<li><p>~~Passing credentials as parameters when creating a Session object~~</p></li>
+<li><p><strong>Environment variables</strong></p></li>
+<li><p><strong>Shared credential file (~/.aws/credentials)</strong></p></li>
+<li><p><strong>AWS config file (~/.aws/config)</strong></p></li>
+<li><p><strong>Assume Role provider</strong></p></li>
+<li><p><strong>Boto2 config file (/etc/boto.cfg and ~/.boto)</strong></p></li>
+<li><p><strong>Instance metadata service on an Amazon EC2 instance that has an IAM role configured</strong>.</p></li>
+<li><p>Datashader’s <code class="docutils literal notranslate"><span class="pre">render_tiles</span></code> function supports only credential search locations highlighted in bold above</p></li>
+<li><p><strong>NOTE</strong>:  all tiles written to S3 are marked with <code class="docutils literal notranslate"><span class="pre">public-read</span></code> ACL settings.</p></li>
+</ul>
+<section id="setup-tile-bucket-using-aws-cli">
+<h4>Setup tile bucket using AWS CLI<a class="headerlink" href="#setup-tile-bucket-using-aws-cli" title="Permalink to this headline">¶</a></h4>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$&gt; aws s3 mb s3://datashader-tiles-testing/
+</pre></div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">full_extent_of_data</span> <span class="o">=</span> <span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="o">-</span><span class="mf">20e6</span><span class="p">),</span> <span class="nb">int</span><span class="p">(</span><span class="o">-</span><span class="mf">20e6</span><span class="p">),</span> <span class="nb">int</span><span class="p">(</span><span class="mf">20e6</span><span class="p">),</span> <span class="nb">int</span><span class="p">(</span><span class="mf">20e6</span><span class="p">))</span>
+<span class="n">output_path</span> <span class="o">=</span> <span class="s1">'s3://datashader-tiles-testing/wald_tiles/'</span>
+<span class="k">try</span><span class="p">:</span>
+    <span class="n">results</span> <span class="o">=</span> <span class="n">render_tiles</span><span class="p">(</span><span class="n">full_extent_of_data</span><span class="p">,</span>
+                           <span class="nb">range</span><span class="p">(</span><span class="mi">3</span><span class="p">),</span>
+                           <span class="n">load_data_func</span><span class="o">=</span><span class="n">load_data_func</span><span class="p">,</span>
+                           <span class="n">rasterize_func</span><span class="o">=</span><span class="n">rasterize_func</span><span class="p">,</span>
+                           <span class="n">shader_func</span><span class="o">=</span><span class="n">shader_func</span><span class="p">,</span>
+                           <span class="n">post_render_func</span><span class="o">=</span><span class="n">post_render_func</span><span class="p">,</span>
+                           <span class="n">output_path</span><span class="o">=</span><span class="n">output_path</span><span class="p">)</span>
+<span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">'you must install boto3 to save tiles to Amazon S3'</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>calculating statistics for level 0
+rendering 1 supertiles for zoom level 0 with span=(0, 2939)
+you must install boto3 to save tiles to Amazon S3
+</pre></div>
+</div>
+</div>
+</div>
+</section>
+</section>
+<section id="preview-s3-tiles">
+<h3>Preview S3 Tiles<a class="headerlink" href="#preview-s3-tiles" title="Permalink to this headline">¶</a></h3>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">xmin</span><span class="p">,</span> <span class="n">ymin</span><span class="p">,</span> <span class="n">xmax</span><span class="p">,</span> <span class="n">ymax</span> <span class="o">=</span> <span class="n">full_extent_of_data</span>
+
+<span class="n">p</span> <span class="o">=</span> <span class="n">figure</span><span class="p">(</span><span class="n">width</span><span class="o">=</span><span class="mi">800</span><span class="p">,</span> <span class="n">height</span><span class="o">=</span><span class="mi">800</span><span class="p">,</span> 
+           <span class="n">x_range</span><span class="o">=</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="o">-</span><span class="mf">20e6</span><span class="p">),</span> <span class="nb">int</span><span class="p">(</span><span class="mf">20e6</span><span class="p">)),</span>
+           <span class="n">y_range</span><span class="o">=</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="o">-</span><span class="mf">20e6</span><span class="p">),</span> <span class="nb">int</span><span class="p">(</span><span class="mf">20e6</span><span class="p">)),</span>
+           <span class="n">tools</span><span class="o">=</span><span class="s2">"pan,wheel_zoom,reset"</span><span class="p">)</span>
+<span class="n">p</span><span class="o">.</span><span class="n">axis</span><span class="o">.</span><span class="n">visible</span> <span class="o">=</span> <span class="kc">False</span>
+<span class="n">p</span><span class="o">.</span><span class="n">background_fill_color</span> <span class="o">=</span> <span class="s1">'black'</span>
+<span class="n">p</span><span class="o">.</span><span class="n">grid</span><span class="o">.</span><span class="n">grid_line_alpha</span> <span class="o">=</span> <span class="mi">0</span>
+<span class="n">p</span><span class="o">.</span><span class="n">add_tile</span><span class="p">(</span><span class="n">WMTSTileSource</span><span class="p">(</span><span class="n">url</span><span class="o">=</span><span class="s2">"https://datashader-tiles-testing.s3.amazonaws.com/wald_tiles/</span><span class="si">{Z}</span><span class="s2">/</span><span class="si">{X}</span><span class="s2">/</span><span class="si">{Y}</span><span class="s2">.png"</span><span class="p">),</span>
+           <span class="n">render_parents</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<span class="n">show</span><span class="p">(</span><span class="n">p</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_html">
+<div class="bk-root" data-root-id="1078" id="99e068ec-8bbf-4cdf-8483-2981c59192a0"></div>
+</div><script type="application/javascript">(function(root) {
+  function embed_document(root) {
+    
+  var docs_json = {"5cb9c8ef-019a-4c94-8465-35b39ca9f2d3":{"defs":[{"extends":null,"module":null,"name":"ReactiveHTML1","overrides":[],"properties":[]},{"extends":null,"module":null,"name":"FlexBox1","overrides":[],"properties":[{"default":"flex-start","kind":null,"name":"align_content"},{"default":"flex-start","kind":null,"name":"align_items"},{"default":"row","kind":null,"name":"flex_direction"},{"default":"wrap","kind":null,"name":"flex_wrap"},{"default":"flex-start","kind":null,"name":"justify_content"}]},{"extends":null,"module":null,"name":"TemplateActions1","overrides":[],"properties":[{"default":0,"kind":null,"name":"open_modal"},{"default":0,"kind":null,"name":"close_modal"}]},{"extends":null,"module":null,"name":"MaterialTemplateActions1","overrides":[],"properties":[{"default":0,"kind":null,"name":"open_modal"},{"default":0,"kind":null,"name":"close_modal"}]}],"roots":{"references":[{"attributes":{"background_fill_color":"black","below":[{"id":"1087"}],"center":[{"id":"1090"},{"id":"1094"}],"height":800,"left":[{"id":"1091"}],"renderers":[{"id":"1103"}],"title":{"id":"1113"},"toolbar":{"id":"1098"},"width":800,"x_range":{"id":"1079"},"x_scale":{"id":"1083"},"y_range":{"id":"1081"},"y_scale":{"id":"1085"}},"id":"1078","subtype":"Figure","type":"Plot"},{"attributes":{"axis":{"id":"1087"},"grid_line_alpha":0,"ticker":null},"id":"1090","type":"Grid"},{"attributes":{"end":20000000,"start":-20000000},"id":"1081","type":"Range1d"},{"attributes":{},"id":"1083","type":"LinearScale"},{"attributes":{},"id":"1095","type":"PanTool"},{"attributes":{},"id":"1085","type":"LinearScale"},{"attributes":{"end":20000000,"start":-20000000},"id":"1079","type":"Range1d"},{"attributes":{},"id":"1092","type":"BasicTicker"},{"attributes":{"formatter":{"id":"1119"},"major_label_policy":{"id":"1120"},"ticker":{"id":"1092"},"visible":false},"id":"1091","type":"LinearAxis"},{"attributes":{},"id":"1088","type":"BasicTicker"},{"attributes":{},"id":"1096","type":"WheelZoomTool"},{"attributes":{"formatter":{"id":"1116"},"major_label_policy":{"id":"1117"},"ticker":{"id":"1088"},"visible":false},"id":"1087","type":"LinearAxis"},{"attributes":{},"id":"1116","type":"BasicTickFormatter"},{"attributes":{},"id":"1117","type":"AllLabels"},{"attributes":{"render_parents":false,"tile_source":{"id":"1102"}},"id":"1103","type":"TileRenderer"},{"attributes":{"axis":{"id":"1091"},"dimension":1,"grid_line_alpha":0,"ticker":null},"id":"1094","type":"Grid"},{"attributes":{},"id":"1113","type":"Title"},{"attributes":{},"id":"1097","type":"ResetTool"},{"attributes":{},"id":"1119","type":"BasicTickFormatter"},{"attributes":{},"id":"1120","type":"AllLabels"},{"attributes":{"active_multi":null,"tools":[{"id":"1095"},{"id":"1096"},{"id":"1097"}]},"id":"1098","type":"Toolbar"},{"attributes":{"url":"https://datashader-tiles-testing.s3.amazonaws.com/wald_tiles/{Z}/{X}/{Y}.png"},"id":"1102","type":"WMTSTileSource"}],"root_ids":["1078"]},"title":"Bokeh Application","version":"2.3.2"}};
+  var render_items = [{"docid":"5cb9c8ef-019a-4c94-8465-35b39ca9f2d3","root_ids":["1078"],"roots":{"1078":"99e068ec-8bbf-4cdf-8483-2981c59192a0"}}];
+  root.Bokeh.embed.embed_items_notebook(docs_json, render_items);
+
+  }
+  if (root.Bokeh !== undefined) {
+    embed_document(root);
+  } else {
+    var attempts = 0;
+    var timer = setInterval(function(root) {
+      if (root.Bokeh !== undefined) {
+        clearInterval(timer);
+        embed_document(root);
+      } else {
+        attempts++;
+        if (attempts > 100) {
+          clearInterval(timer);
+          console.log("Bokeh: ERROR: Unable to run BokehJS code because BokehJS library is missing");
+        }
+      }
+    }, 10, root)
+  }
+})(window);</script></div>
+</div>
+</section>
+</section>
+<div id="scroller-right">This web page was generated from a Jupyter notebook and not all interactivity will work on this website. <a href="https://raw.githubusercontent.com/holoviz/datashader/master/examples/tiling.ipynb">Right click to download and run locally</a> for full Python-backed interactivity.</div><hr class="docutils"/>
+<p><a class="reference external" href="https://raw.githubusercontent.com/holoviz/panel/master/examples/tiling.ipynb">Right click to download this notebook from GitHub.</a></p>
+</section>
+</div>
+</div>
+<!-- END MAIN BODY OF DOCS ––––––––––––– -->
+<footer class="footer">
+<div class="footer-links">
+<ul>
+<li><span class="footer-title">Links</span></li>
+<li><a href="getting_started/index.html">Getting Started</a></li>
+<li><a href="user_guide/index.html">User Guide</a></li>
+<li><a href="topics/index.html">Topics</a></li>
+<li><a href="api.html">API</a></li>
+<li><a href="FAQ.html">FAQ</a></li>
+<li><a href="about.html">About</a></li>
+</ul>
+<ul>
+<li><span class="footer-title">Join Us</span></li>
+<li><a href="https://github.com/holoviz/datashader/">Github</a></li>
+<li><a href="https://twitter.com/datashader/">Twitter</a></li>
+<li><a href="https://discourse.holoviz.org/">Discourse</a></li>
+<li><a href="https://holoviz.org">HoloViz</a></li>
+</ul>
+<ul class="copyright">
+<li>2016-2021, Anaconda, Inc.</li>
+</ul>
+</div>
+</footer>
+<!-- Google Analytics -->
+<!-- Global site tag (gtag.js) - Google Analytics -->
+<script async="" src="https://www.googletagmanager.com/gtag/js?id=UA-154795830-1"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'UA-154795830-1', { 'anonymize_ip': true });
+</script>
+<!-- MathJax Config -->
+<script type="text/x-mathjax-config">
+MathJax.Hub.Config({
+  tex2jax: {inlineMath: [['$','$'], ['\\(','\\)']]}
+});
+</script>
+<!-- End Document
+  –––––––––––––––––––––––––––––––––––––––––––––––––– -->
+</body>
+</html>

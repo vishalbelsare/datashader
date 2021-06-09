@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<!-- Basic Page Needs
+  –––––––––––––––––––––––––––––––––––––––––––––––––– -->
+<meta charset="utf-8"/>
+<title>Extending — Datashader 0.13.0 documentation</title>
+<meta content="Turns even the largest data into images, accurately." name="description"/>
+<meta content="Datashader contributors" name="author"/>
+<!-- Mobile Specific Metas
+  –––––––––––––––––––––––––––––––––––––––––––––––––– -->
+<meta content="width=device-width, initial-scale=1" name="viewport"/>
+<!-- FONT
+  –––––––––––––––––––––––––––––––––––––––––––––––––– -->
+<script src="https://ajax.googleapis.com/ajax/libs/webfont/1.6.16/webfont.js"></script>
+<script>
+    WebFont.load({
+      google: {
+        families: ['Source Sans Pro']
+      }
+    });
+  </script>
+<!-- CSS
+  –––––––––––––––––––––––––––––––––––––––––––––––––– -->
+<link href="../_static/css/main.css" rel="stylesheet"/>
+<link href="../_static/nbsite.css" rel="stylesheet"/>
+<!-- Scripts
+  –––––––––––––––––––––––––––––––––––––––––––––––––– -->
+<script src="//ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
+<script async="" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-MML-AM_CHTML" type="text/javascript">
+</script>
+<script src="../_static/js/main.js"></script>
+<script src="../_static/nbsite.js"></script>
+<script src="../_static/require.js"></script>
+<!-- Favicon
+  –––––––––––––––––––––––––––––––––––––––––––––––––– -->
+<link href="../_static/favicon.ico" rel="icon" type="image/png"/>
+<!-- Canonical
+  –––––––––––––––––––––––––––––––––––––––––––––––––– -->
+<link href="/user_guide/Extending.html" rel="canonical">
+</link></head>
+<body class="">
+<header class="navigation">
+<div class="wrapper">
+<a class="logo" href="../index.html">
+<img alt="Logo" src="../_static/logo_horizontal.svg"/>
+</a>
+<a class="navigation-menu-button" href="javascript:void(0)" id="js-mobile-menu">Menu</a>
+<nav>
+<ul class="navigation-menu show" id="js-navigation-menu">
+<li class="nav-link doc-head"><a href="https://github.com/holoviz/datashader/">Github</a></li>
+<li class="nav-link doc-head"><a href="https://twitter.com/datashader/">Twitter</a></li>
+<li class="nav-link doc-head"><a href="https://discourse.holoviz.org/">Discourse</a></li>
+<li class="nav-link doc-head"><a href="https://holoviz.org">HoloViz</a></li>
+<li class="nav-link">
+<div style="display:inline-block;vertical-align: middle;">
+<div class="search-bar">
+<form action="../search.html" method="get" role="search">
+<input name="q" placeholder="Search" type="search"/>
+<button type="submit">
+<img alt="Search Icon" src="https://raw.githubusercontent.com/thoughtbot/refills/master/source/images/search-icon-black.png"/>
+</button>
+</form>
+</div>
+</div>
+</li>
+</ul>
+</nav>
+</div>
+</header>
+<div class="second-nav">
+<nav>
+<ul class="navigation-menu show">
+<li class="nav-link doc-head"><a href="../getting_started/index.html">Getting Started</a></li>
+<li class="nav-link doc-head"><a href="index.html">User Guide</a></li>
+<li class="nav-link doc-head"><a href="../topics/index.html">Topics</a></li>
+<li class="nav-link doc-head"><a href="../api.html">API</a></li>
+<li class="nav-link doc-head"><a href="../FAQ.html">FAQ</a></li>
+<li class="nav-link doc-head"><a href="../about.html">About</a></li>
+</ul>
+</nav>
+</div>
+<!-- MAIN BODY OF DOCS –––––––––––––––––– -->
+<div class="docs section">
+<div id="hacketyhackhack"> <!-- style="width:20%;margin-right: 100px;"> --> <!--style="display: none;"> style="display:none;"> -->
+<div class="toc" style="width:15%; margin-right:20px;">
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../index.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../getting_started/index.html">Getting Started</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">User Guide</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="Plotting_Pitfalls.html">Plotting Pitfalls</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Points.html">Points</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Timeseries.html">Timeseries</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Trajectories.html">Trajectories</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Grids.html">Grids</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Trimesh.html">Trimesh</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Networks.html">Networks</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Geography.html">Geography</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Extending</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#data">Data</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#projection">Projection</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#aggregation">Aggregation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#transformation">Transformation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#colormapping">Colormapping</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#embedding">Embedding</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="Performance.html">Performance</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../topics/index.html">Topics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../api.html">API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../FAQ.html">FAQ</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../about.html">About</a></li>
+</ul>
+</div>
+</div>
+<div class="content"> <!-- style="max-width:80%;margin-left:auto;margin-right: auto;">-->
+<section id="extending">
+<h1>Extending<a class="headerlink" href="#extending" title="Permalink to this headline">¶</a></h1>
+<p>Datashader is designed as a series of stages that can each be configured (as described in preceding pages), extended, or replaced:</p>
+<p><img alt="pipeline diagram" src="../assets/images/pipeline2.png"/></p>
+<p>This document contains brief notes on how to extend or replace each of these stages, following the organization of the <span class="xref myst">Pipeline section</span> of the documentation. For the full details, you can study the <a class="reference external" href="https://github.com/holoviz/datashader">Datashader source code</a>.</p>
+<section id="data">
+<h2>Data<a class="headerlink" href="#data" title="Permalink to this headline">¶</a></h2>
+<p>Right now, Datashader accepts Pandas or Dask dataframes for Points, Lines, and Graphs, and xarray arrays for Raster data. The Lines and Graph support makes certain assumptions about the specific organizations of those data structures, such as that Lines will be specified as a series of points on dataframe rows, with NaNs separating subsequent lines.  There are some utilities in <code class="docutils literal notranslate"><span class="pre">ds.utils()</span></code> to convert other data formats into these formats, and it should be simple to write additional conversion utilities, which can be submitted as PRs if you think they are likely to be useful to others.</p>
+<p>Datashader’s data access is controlled by a multi-dispatch mechanism, and so you can add direct support for other data types without modifying the datashader code by registering the appropriate machinery.  See <code class="docutils literal notranslate"><span class="pre">ds.utils.Dispatcher</span></code> and the examples in <code class="docutils literal notranslate"><span class="pre">pandas.py</span></code> and <code class="docutils literal notranslate"><span class="pre">dask.py</span></code>.  Doing so is of course more involved than converting your data, but if you need to work natively with data in other formats it may be worth doing.  Again, if the resulting support seems useful to others, we would be happy to consider adding it to datashader proper; just make a PR.</p>
+</section>
+<section id="projection">
+<h2>Projection<a class="headerlink" href="#projection" title="Permalink to this headline">¶</a></h2>
+<p>Datashader provides Point, Line, and Raster glyphs, specified at the canvas/scene level and primarily implemented in <code class="docutils literal notranslate"><span class="pre">glyphs.py</span></code>.  You can create your own mappings beyond these, such as shading a point onto a set of bins according to some kernel function or some positional uncertainty value, but doing so is much more difficult than customizing later stages in the pipeline, and is beyond the scope of this documentation.</p>
+</section>
+<section id="aggregation">
+<h2>Aggregation<a class="headerlink" href="#aggregation" title="Permalink to this headline">¶</a></h2>
+<p>It should be reasonably straightforward to implement your own reduction operators, if they can be expressed as an incremental computation. These components are highly optimized and thus the code is perhaps a bit hard to follow, but adding these should be much simpler than new glyph types.</p>
+<p>Some reduction operators cannot be implemented incrementally.  For instance, a true mathematical median operation requires knowing all of the datapoints for a given bin at the same time, which requires storing the entire dataset in memory in a different format from the original. Datashader is designed for datasets potentially much larger than can fit on any one machine, and so we have not provided a median operator that would not have that property.  There are approximate median algorithms, which can work by dividing the range of possible values into bins, and we would be happy to accept a contribution of such an operator implemented efficiently.</p>
+</section>
+<section id="transformation">
+<h2>Transformation<a class="headerlink" href="#transformation" title="Permalink to this headline">¶</a></h2>
+<p>Once you have an aggregate array, you can do anything you like!  This array will have a fixed size regardless of your original dataset size, and so anything operating on the aggregate array need not be particularly well optimized or tuned for it to be practical for large datasets.  The <a class="reference external" href="http://xarray.pydata.org/en/stable/computation.html">xarray documentation</a> describes all the various transformations you can apply from within xarray, and of course you can always extract the data values and operate on them outside of xarray for any transformation not directly supported by xarray, then construct a suitable xarray object for use in the following stage.  If there are transformations that seem particularly useful to other datashader users, we would be happy to consider including them, but generally these are very lightweight objects that you can simply create and discard as needed for your applications.</p>
+</section>
+<section id="colormapping">
+<h2>Colormapping<a class="headerlink" href="#colormapping" title="Permalink to this headline">¶</a></h2>
+<p>The <code class="docutils literal notranslate"><span class="pre">tf.shade()</span></code> function accepts a <code class="docutils literal notranslate"><span class="pre">how</span></code> argument that can be any mathematical function, allowing arbitrary rescaling of the aggregate values before mapping them into the observable color space.  Again, these objects can be very lightweight, but if you come up with one that seems useful to others, feel free to submit it for inclusion in Datashader.</p>
+<p>Once the image is created, you can use any of the various transformation functions in <code class="docutils literal notranslate"><span class="pre">ds.transfer_functions</span></code>, and writing new such functions is typically trivial.  As before, these functions are very lightweight, but if one is particularly useful, please submit it for consideration for the library.</p>
+</section>
+<section id="embedding">
+<h2>Embedding<a class="headerlink" href="#embedding" title="Permalink to this headline">¶</a></h2>
+<p>Datashader is directly supported by <a class="reference external" href="http://holoviews.org">HoloViews</a>, with interactive exploration supported for its <a class="reference external" href="http://bokeh.pydata.org">Bokeh</a> extension, and static plots supported for its <a class="reference external" href="http://matplotlib.org">Matplotlib</a> extension. Plotly 3.0 now includes <a class="reference external" href="https://plot.ly/python/change-callbacks-datashader/">Datashader support</a> as well.  Because Datashader simply creates arrays and RGBA images, it should be straightforward to add support for Datashader to any plotting package that can call a Python function.  We would love to accept contributions of interfaces for other plotting packages, or for those packages to support rendering using Datashader directly.  If you do add Datashader support, please open an issue describing what you’ve done, so that we can add your tool to our test suite for to validate our changes against as we further develop the library.</p>
+</section>
+<div id="scroller-right">This web page was generated from a Jupyter notebook and not all interactivity will work on this website. <a href="https://raw.githubusercontent.com/holoviz/datashader/master/examples/user_guide/9_Extending.ipynb">Right click to download and run locally</a> for full Python-backed interactivity.</div><hr class="docutils"/>
+<p><a class="reference external" href="https://raw.githubusercontent.com/holoviz/panel/master/examples/user_guide/9_Extending.ipynb">Right click to download this notebook from GitHub.</a></p>
+</section>
+</div>
+</div>
+<!-- END MAIN BODY OF DOCS ––––––––––––– -->
+<footer class="footer">
+<div class="footer-links">
+<ul>
+<li><span class="footer-title">Links</span></li>
+<li><a href="../getting_started/index.html">Getting Started</a></li>
+<li><a href="index.html">User Guide</a></li>
+<li><a href="../topics/index.html">Topics</a></li>
+<li><a href="../api.html">API</a></li>
+<li><a href="../FAQ.html">FAQ</a></li>
+<li><a href="../about.html">About</a></li>
+</ul>
+<ul>
+<li><span class="footer-title">Join Us</span></li>
+<li><a href="https://github.com/holoviz/datashader/">Github</a></li>
+<li><a href="https://twitter.com/datashader/">Twitter</a></li>
+<li><a href="https://discourse.holoviz.org/">Discourse</a></li>
+<li><a href="https://holoviz.org">HoloViz</a></li>
+</ul>
+<ul class="copyright">
+<li>2016-2021, Anaconda, Inc.</li>
+</ul>
+</div>
+</footer>
+<!-- Google Analytics -->
+<!-- Global site tag (gtag.js) - Google Analytics -->
+<script async="" src="https://www.googletagmanager.com/gtag/js?id=UA-154795830-1"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'UA-154795830-1', { 'anonymize_ip': true });
+</script>
+<!-- MathJax Config -->
+<script type="text/x-mathjax-config">
+MathJax.Hub.Config({
+  tex2jax: {inlineMath: [['$','$'], ['\\(','\\)']]}
+});
+</script>
+<!-- End Document
+  –––––––––––––––––––––––––––––––––––––––––––––––––– -->
+</body>
+</html>

@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<!-- Basic Page Needs
+  –––––––––––––––––––––––––––––––––––––––––––––––––– -->
+<meta charset="utf-8"/>
+<title>streaming-aggregation — Datashader 0.13.0 documentation</title>
+<meta content="Turns even the largest data into images, accurately." name="description"/>
+<meta content="Datashader contributors" name="author"/>
+<!-- Mobile Specific Metas
+  –––––––––––––––––––––––––––––––––––––––––––––––––– -->
+<meta content="width=device-width, initial-scale=1" name="viewport"/>
+<!-- FONT
+  –––––––––––––––––––––––––––––––––––––––––––––––––– -->
+<script src="https://ajax.googleapis.com/ajax/libs/webfont/1.6.16/webfont.js"></script>
+<script>
+    WebFont.load({
+      google: {
+        families: ['Source Sans Pro']
+      }
+    });
+  </script>
+<!-- CSS
+  –––––––––––––––––––––––––––––––––––––––––––––––––– -->
+<link href="_static/css/main.css" rel="stylesheet"/>
+<link href="_static/nbsite.css" rel="stylesheet"/>
+<!-- Scripts
+  –––––––––––––––––––––––––––––––––––––––––––––––––– -->
+<script src="//ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
+<script async="" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-MML-AM_CHTML" type="text/javascript">
+</script>
+<script src="_static/js/main.js"></script>
+<script src="_static/nbsite.js"></script>
+<script src="_static/require.js"></script>
+<!-- Favicon
+  –––––––––––––––––––––––––––––––––––––––––––––––––– -->
+<link href="_static/favicon.ico" rel="icon" type="image/png"/>
+<!-- Canonical
+  –––––––––––––––––––––––––––––––––––––––––––––––––– -->
+<link href="/streaming-aggregation.html" rel="canonical">
+</link></head>
+<body class="">
+<header class="navigation">
+<div class="wrapper">
+<a class="logo" href="index.html">
+<img alt="Logo" src="_static/logo_horizontal.svg"/>
+</a>
+<a class="navigation-menu-button" href="javascript:void(0)" id="js-mobile-menu">Menu</a>
+<nav>
+<ul class="navigation-menu show" id="js-navigation-menu">
+<li class="nav-link doc-head"><a href="https://github.com/holoviz/datashader/">Github</a></li>
+<li class="nav-link doc-head"><a href="https://twitter.com/datashader/">Twitter</a></li>
+<li class="nav-link doc-head"><a href="https://discourse.holoviz.org/">Discourse</a></li>
+<li class="nav-link doc-head"><a href="https://holoviz.org">HoloViz</a></li>
+<li class="nav-link">
+<div style="display:inline-block;vertical-align: middle;">
+<div class="search-bar">
+<form action="search.html" method="get" role="search">
+<input name="q" placeholder="Search" type="search"/>
+<button type="submit">
+<img alt="Search Icon" src="https://raw.githubusercontent.com/thoughtbot/refills/master/source/images/search-icon-black.png"/>
+</button>
+</form>
+</div>
+</div>
+</li>
+</ul>
+</nav>
+</div>
+</header>
+<div class="second-nav">
+<nav>
+<ul class="navigation-menu show">
+<li class="nav-link doc-head"><a href="getting_started/index.html">Getting Started</a></li>
+<li class="nav-link doc-head"><a href="user_guide/index.html">User Guide</a></li>
+<li class="nav-link doc-head"><a href="topics/index.html">Topics</a></li>
+<li class="nav-link doc-head"><a href="api.html">API</a></li>
+<li class="nav-link doc-head"><a href="FAQ.html">FAQ</a></li>
+<li class="nav-link doc-head"><a href="about.html">About</a></li>
+</ul>
+</nav>
+</div>
+<!-- MAIN BODY OF DOCS –––––––––––––––––– -->
+<div class="docs section">
+<div id="hacketyhackhack"> <!-- style="width:20%;margin-right: 100px;"> --> <!--style="display: none;"> style="display:none;"> -->
+<div class="toc" style="width:15%; margin-right:20px;">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="index.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="getting_started/index.html">Getting Started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="user_guide/index.html">User Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="topics/index.html">Topics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api.html">API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="FAQ.html">FAQ</a></li>
+<li class="toctree-l1"><a class="reference internal" href="about.html">About</a></li>
+</ul>
+</div>
+</div>
+<div class="content"> <!-- style="max-width:80%;margin-left:auto;margin-right: auto;">-->
+<section id="streaming-aggregation">
+<h1>streaming-aggregation<a class="headerlink" href="#streaming-aggregation" title="Permalink to this headline">¶</a></h1>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">collections</span> <span class="kn">import</span> <span class="n">deque</span>
+<span class="kn">from</span> <span class="nn">functools</span> <span class="kn">import</span> <span class="n">partial</span>
+<span class="kn">from</span> <span class="nn">itertools</span> <span class="kn">import</span> <span class="n">cycle</span>
+
+<span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+
+<span class="kn">import</span> <span class="nn">datashader</span> <span class="k">as</span> <span class="nn">ds</span>
+<span class="kn">import</span> <span class="nn">datashader.transfer_functions</span> <span class="k">as</span> <span class="nn">tf</span>
+<span class="kn">from</span> <span class="nn">datashader.colors</span> <span class="kn">import</span> <span class="n">viridis</span>
+
+<span class="kn">from</span> <span class="nn">streamz</span> <span class="kn">import</span> <span class="n">Stream</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">taxi_trips_stream</span><span class="p">(</span><span class="n">source</span><span class="o">=</span><span class="s1">'data/nyc_taxi.csv'</span><span class="p">,</span> <span class="n">frequency</span><span class="o">=</span><span class="s1">'T'</span><span class="p">):</span>
+    <span class="sd">"""Generate dataframes grouped by given frequency"""</span>
+    <span class="k">def</span> <span class="nf">get_group</span><span class="p">(</span><span class="n">resampler</span><span class="p">,</span> <span class="n">key</span><span class="p">):</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">df</span> <span class="o">=</span> <span class="n">resampler</span><span class="o">.</span><span class="n">get_group</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
+            <span class="n">df</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">drop</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
+            <span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">df</span>
+
+    <span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">source</span><span class="p">,</span>
+                     <span class="n">infer_datetime_format</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                     <span class="n">parse_dates</span><span class="o">=</span><span class="p">[</span><span class="s1">'tpep_pickup_datetime'</span><span class="p">,</span> <span class="s1">'tpep_pickup_datetime'</span><span class="p">])</span>
+    <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">set_index</span><span class="p">(</span><span class="s1">'tpep_pickup_datetime'</span><span class="p">,</span> <span class="n">drop</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">sort_index</span><span class="p">()</span>
+    <span class="n">r</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">resample</span><span class="p">(</span><span class="n">frequency</span><span class="p">)</span>
+    <span class="n">chunks</span> <span class="o">=</span> <span class="p">[</span><span class="n">get_group</span><span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="n">g</span><span class="p">)</span> <span class="k">for</span> <span class="n">g</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">r</span><span class="o">.</span><span class="n">groups</span><span class="p">)]</span>
+    <span class="n">indices</span> <span class="o">=</span> <span class="n">cycle</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">chunks</span><span class="p">)))</span>
+    <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+        <span class="k">yield</span> <span class="n">chunks</span><span class="p">[</span><span class="nb">next</span><span class="p">(</span><span class="n">indices</span><span class="p">)]</span>
+</pre></div>
+</div>
+</div>
+</div>
+<section id="create-streams">
+<h2>Create streams<a class="headerlink" href="#create-streams" title="Permalink to this headline">¶</a></h2>
+<p>Given a stream of dataframes representing NYC taxi data, we create four streams: two streams are sliding window aggregations over some time period, while two other streams track the cumulative average for a particular value. The pipeline visualization below shows each step that makes up each stream.</p>
+<p>For each aggregation stream, the steps are 1) aggregate each dataframe using a Datashader reduction, 2) keep sliding window of those aggregations, and 3) combine sliding window collection into image. The first stream creates a two-day sliding window aggregation, while the second stream creates a 1-week sliding window aggregation.</p>
+<p>For each cumulative average stream, we track the cumulative sum of each value along with the number of cumulative data points.</p>
+<p>We use the primitives given in the <code class="docutils literal notranslate"><span class="pre">streamz</span></code> library to accomplish this. <code class="docutils literal notranslate"><span class="pre">aggregated_sliding_window_image_queue</span></code> creates each aggregation stream. <code class="docutils literal notranslate"><span class="pre">cumulative_mean_queue</span></code> creates each cumulative average stream, but this will likely be replaced by a native <code class="docutils literal notranslate"><span class="pre">streamz.StreamingDataFrame</span></code> container when ready. Each stream will place its final result into a double-ended queue, which is used to keep a history of previous results. By default, we only keep the most recent.</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">aggregate_df</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">cvs</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">agg</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">df</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">min</span><span class="p">(),</span> <span class="n">df</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">max</span><span class="p">(),</span> <span class="n">cvs</span><span class="o">.</span><span class="n">points</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">agg</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">aggregate_images</span><span class="p">(</span><span class="n">iterable</span><span class="p">,</span> <span class="n">cmap</span><span class="p">):</span>
+    <span class="n">name</span> <span class="o">=</span> <span class="s2">"</span><span class="si">{:.10}</span><span class="s2"> - </span><span class="si">{:.10}</span><span class="s2">"</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">iterable</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]),</span> <span class="nb">str</span><span class="p">(</span><span class="n">iterable</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="mi">1</span><span class="p">]))</span>
+    <span class="n">total</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">([</span><span class="n">item</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">iterable</span><span class="p">])</span>
+    <span class="k">return</span> <span class="n">tf</span><span class="o">.</span><span class="n">shade</span><span class="p">(</span><span class="n">total</span><span class="p">,</span> <span class="n">cmap</span><span class="o">=</span><span class="n">cmap</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">aggregated_sliding_window_image_queue</span><span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="n">agg1</span><span class="p">,</span> <span class="n">agg2</span><span class="p">,</span> <span class="n">window</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">history</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+    <span class="n">q</span> <span class="o">=</span> <span class="n">deque</span><span class="p">(</span><span class="n">maxlen</span><span class="o">=</span><span class="n">history</span><span class="p">)</span>
+    <span class="n">s</span> <span class="o">=</span> <span class="n">source</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="n">agg1</span><span class="p">)</span><span class="o">.</span><span class="n">sliding_window</span><span class="p">(</span><span class="n">window</span><span class="p">)</span>
+    <span class="n">s</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="n">agg2</span><span class="p">)</span><span class="o">.</span><span class="n">sink</span><span class="p">(</span><span class="n">q</span><span class="o">.</span><span class="n">append</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">q</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">cumulative_mean_queue</span><span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="n">column</span><span class="p">,</span> <span class="n">history</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">accumulator</span><span class="p">(</span><span class="n">acc</span><span class="p">,</span> <span class="n">df</span><span class="p">):</span>
+        <span class="n">n</span><span class="p">,</span> <span class="n">total</span><span class="p">,</span> <span class="n">oldest</span> <span class="o">=</span> <span class="n">acc</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">oldest</span><span class="p">:</span>
+            <span class="n">oldest</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">min</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">n</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="n">total</span> <span class="o">+</span> <span class="n">df</span><span class="p">[</span><span class="n">column</span><span class="p">]</span><span class="o">.</span><span class="n">sum</span><span class="p">(),</span> <span class="n">oldest</span><span class="p">,</span> <span class="n">df</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">max</span><span class="p">()</span>
+    
+    <span class="k">def</span> <span class="nf">merge</span><span class="p">(</span><span class="n">value</span><span class="p">):</span>
+        <span class="n">n</span><span class="p">,</span> <span class="n">total</span><span class="p">,</span> <span class="n">oldest</span><span class="p">,</span> <span class="n">latest</span> <span class="o">=</span> <span class="n">value</span>
+        <span class="k">return</span> <span class="n">oldest</span><span class="p">,</span> <span class="n">latest</span><span class="p">,</span> <span class="n">total</span> <span class="o">/</span> <span class="n">n</span>
+
+    <span class="n">q</span> <span class="o">=</span> <span class="n">deque</span><span class="p">(</span><span class="n">maxlen</span><span class="o">=</span><span class="n">history</span><span class="p">)</span>
+    <span class="n">source</span><span class="o">.</span><span class="n">accumulate</span><span class="p">(</span><span class="n">accumulator</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="kc">None</span><span class="p">))</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="n">merge</span><span class="p">)</span><span class="o">.</span><span class="n">sink</span><span class="p">(</span><span class="n">q</span><span class="o">.</span><span class="n">append</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">q</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">show_queue</span><span class="p">(</span><span class="n">q</span><span class="p">,</span> <span class="n">column</span><span class="p">):</span>
+    <span class="n">pd</span><span class="o">.</span><span class="n">options</span><span class="o">.</span><span class="n">display</span><span class="o">.</span><span class="n">float_format</span> <span class="o">=</span> <span class="s1">'</span><span class="si">{:.2f}</span><span class="s1">'</span><span class="o">.</span><span class="n">format</span>
+    <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">q</span><span class="p">),</span> <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s1">'start'</span><span class="p">,</span> <span class="s1">'end'</span><span class="p">,</span> <span class="n">column</span><span class="p">])</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">x_range</span> <span class="o">=</span> <span class="p">(</span><span class="o">-</span><span class="mf">8243204.0</span><span class="p">,</span> <span class="o">-</span><span class="mf">8226511.0</span><span class="p">)</span>
+<span class="n">y_range</span> <span class="o">=</span> <span class="p">(</span><span class="mf">4968192.0</span><span class="p">,</span> <span class="mf">4982886.0</span><span class="p">)</span>
+<span class="n">cvs</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">Canvas</span><span class="p">(</span><span class="n">plot_width</span><span class="o">=</span><span class="mi">800</span><span class="p">,</span> <span class="n">plot_height</span><span class="o">=</span><span class="mi">600</span><span class="p">,</span> <span class="n">x_range</span><span class="o">=</span><span class="n">x_range</span><span class="p">,</span> <span class="n">y_range</span><span class="o">=</span><span class="n">y_range</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Helper functions for useful aggregations</span>
+<span class="n">min_amount</span>     <span class="o">=</span> <span class="n">partial</span><span class="p">(</span><span class="n">aggregate_df</span><span class="p">,</span> <span class="n">cvs</span><span class="p">,</span> <span class="n">x</span><span class="o">=</span><span class="s1">'pickup_x'</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="s1">'pickup_y'</span><span class="p">,</span> <span class="n">agg</span><span class="o">=</span><span class="n">ds</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="s1">'total_amount'</span><span class="p">))</span>
+<span class="n">max_amount</span>     <span class="o">=</span> <span class="n">partial</span><span class="p">(</span><span class="n">aggregate_df</span><span class="p">,</span> <span class="n">cvs</span><span class="p">,</span> <span class="n">x</span><span class="o">=</span><span class="s1">'pickup_x'</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="s1">'pickup_y'</span><span class="p">,</span> <span class="n">agg</span><span class="o">=</span><span class="n">ds</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="s1">'total_amount'</span><span class="p">))</span>
+<span class="n">mean_amount</span>    <span class="o">=</span> <span class="n">partial</span><span class="p">(</span><span class="n">aggregate_df</span><span class="p">,</span> <span class="n">cvs</span><span class="p">,</span> <span class="n">x</span><span class="o">=</span><span class="s1">'pickup_x'</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="s1">'pickup_y'</span><span class="p">,</span> <span class="n">agg</span><span class="o">=</span><span class="n">ds</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="s1">'total_amount'</span><span class="p">))</span>
+<span class="n">sum_amount</span>     <span class="o">=</span> <span class="n">partial</span><span class="p">(</span><span class="n">aggregate_df</span><span class="p">,</span> <span class="n">cvs</span><span class="p">,</span> <span class="n">x</span><span class="o">=</span><span class="s1">'pickup_x'</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="s1">'pickup_y'</span><span class="p">,</span> <span class="n">agg</span><span class="o">=</span><span class="n">ds</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="s1">'total_amount'</span><span class="p">))</span>
+<span class="n">max_passengers</span> <span class="o">=</span> <span class="n">partial</span><span class="p">(</span><span class="n">aggregate_df</span><span class="p">,</span> <span class="n">cvs</span><span class="p">,</span> <span class="n">x</span><span class="o">=</span><span class="s1">'pickup_x'</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="s1">'pickup_y'</span><span class="p">,</span> <span class="n">agg</span><span class="o">=</span><span class="n">ds</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="s1">'passenger_count'</span><span class="p">))</span>
+<span class="n">sum_passengers</span> <span class="o">=</span> <span class="n">partial</span><span class="p">(</span><span class="n">aggregate_df</span><span class="p">,</span> <span class="n">cvs</span><span class="p">,</span> <span class="n">x</span><span class="o">=</span><span class="s1">'pickup_x'</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="s1">'pickup_y'</span><span class="p">,</span> <span class="n">agg</span><span class="o">=</span><span class="n">ds</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="s1">'passenger_count'</span><span class="p">))</span>
+<span class="n">sum_pickups</span>    <span class="o">=</span> <span class="n">partial</span><span class="p">(</span><span class="n">aggregate_df</span><span class="p">,</span> <span class="n">cvs</span><span class="p">,</span> <span class="n">x</span><span class="o">=</span><span class="s1">'pickup_x'</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="s1">'pickup_y'</span><span class="p">,</span> <span class="n">agg</span><span class="o">=</span><span class="n">ds</span><span class="o">.</span><span class="n">count</span><span class="p">())</span>
+
+<span class="n">reduce_viridis</span> <span class="o">=</span> <span class="n">partial</span><span class="p">(</span><span class="n">aggregate_images</span><span class="p">,</span> <span class="n">cmap</span><span class="o">=</span><span class="n">viridis</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">source</span> <span class="o">=</span> <span class="n">Stream</span><span class="p">()</span>
+<span class="n">q_days</span> <span class="o">=</span> <span class="n">aggregated_sliding_window_image_queue</span><span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="n">window</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">history</span><span class="o">=</span><span class="mi">6</span><span class="p">,</span> <span class="n">agg1</span><span class="o">=</span><span class="n">max_amount</span><span class="p">,</span> <span class="n">agg2</span><span class="o">=</span><span class="n">reduce_viridis</span><span class="p">)</span>
+<span class="n">q_week</span> <span class="o">=</span> <span class="n">aggregated_sliding_window_image_queue</span><span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="n">window</span><span class="o">=</span><span class="mi">7</span><span class="p">,</span> <span class="n">agg1</span><span class="o">=</span><span class="n">max_amount</span><span class="p">,</span> <span class="n">agg2</span><span class="o">=</span><span class="n">reduce_viridis</span><span class="p">)</span>
+
+<span class="n">q_avg_passengers</span> <span class="o">=</span> <span class="n">cumulative_mean_queue</span><span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="s1">'passenger_count'</span><span class="p">,</span> <span class="n">history</span><span class="o">=</span><span class="mi">7</span><span class="p">)</span>
+<span class="n">q_avg_amount</span>     <span class="o">=</span> <span class="n">cumulative_mean_queue</span><span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="s1">'total_amount'</span><span class="p">,</span> <span class="n">history</span><span class="o">=</span><span class="mi">7</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">source</span><span class="o">.</span><span class="n">visualize</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<img alt="_images/streaming-aggregation_12_0.png" src="_images/streaming-aggregation_12_0.png">
+</img></div>
+</div>
+</section>
+<section id="simplifying-stream-creation">
+<h2>Simplifying stream creation<a class="headerlink" href="#simplifying-stream-creation" title="Permalink to this headline">¶</a></h2>
+<p>As you can see in the previous section, there are a few areas to improve upon:</p>
+<ul class="simple">
+<li><p>less code/boilerplate</p></li>
+<li><p>hide individual steps seen in stream diagram</p></li>
+<li><p>encapsulate separate stream construction methods into helper classes</p></li>
+<li><p>separate stream creation and stream sink</p></li>
+<li><p>allow for partial results from sliding windows (not currently supported by <code class="docutils literal notranslate"><span class="pre">streamz</span></code>)</p></li>
+<li><p>output results into other collections besides queues</p></li>
+</ul>
+<p>By subclassing <code class="docutils literal notranslate"><span class="pre">streamz.Stream</span></code>, we’ve accomplished the above without sacrificing readability.</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">SlidingWindowImageAggregate</span><span class="p">(</span><span class="n">Stream</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">source</span><span class="p">,</span> <span class="n">canvas</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">agg</span><span class="p">,</span> <span class="n">n</span><span class="o">=</span><span class="mi">7</span><span class="p">,</span> <span class="n">cmap</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">bgcolor</span><span class="o">=</span><span class="s1">'black'</span><span class="p">):</span>
+        <span class="c1"># Set internal streamz instance variables to control names in diagram</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">n</span> <span class="o">=</span> <span class="n">n</span>
+        
+        <span class="k">def</span> <span class="nf">aggregate_df</span><span class="p">(</span><span class="n">df</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">df</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">min</span><span class="p">(),</span> <span class="n">df</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">max</span><span class="p">(),</span> <span class="n">canvas</span><span class="o">.</span><span class="n">points</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">agg</span><span class="p">)</span>
+
+        <span class="k">def</span> <span class="nf">aggregate_images</span><span class="p">(</span><span class="n">iterable</span><span class="p">):</span>
+            <span class="n">name</span> <span class="o">=</span> <span class="s2">"</span><span class="si">{:.10}</span><span class="s2"> - </span><span class="si">{:.10}</span><span class="s2">"</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">iterable</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]),</span> <span class="nb">str</span><span class="p">(</span><span class="n">iterable</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="mi">1</span><span class="p">]))</span>
+            <span class="n">total</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">([</span><span class="n">item</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">iterable</span><span class="p">])</span>
+            <span class="k">return</span> <span class="n">tf</span><span class="o">.</span><span class="n">set_background</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">shade</span><span class="p">(</span><span class="n">total</span><span class="p">,</span> <span class="n">cmap</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">),</span> <span class="n">color</span><span class="o">=</span><span class="n">bgcolor</span><span class="p">)</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">cache</span> <span class="o">=</span> <span class="n">deque</span><span class="p">(</span><span class="n">maxlen</span><span class="o">=</span><span class="n">n</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">agg1</span> <span class="o">=</span> <span class="n">aggregate_df</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">agg2</span> <span class="o">=</span> <span class="n">aggregate_images</span>
+        
+        <span class="n">Stream</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">source</span><span class="p">)</span>
+        
+    <span class="k">def</span> <span class="nf">update</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">who</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cache</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">agg1</span><span class="p">(</span><span class="n">x</span><span class="p">))</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">emit</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">agg2</span><span class="p">(</span><span class="nb">tuple</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cache</span><span class="p">)))</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">CumulativeMean</span><span class="p">(</span><span class="n">Stream</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">source</span><span class="p">,</span> <span class="n">column</span><span class="p">):</span>
+        <span class="c1"># Set internal streamz instance variables to control names in diagram</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">str_list</span> <span class="o">=</span> <span class="p">[</span><span class="s1">'column'</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">column</span> <span class="o">=</span> <span class="n">column</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">count</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">total</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">oldest</span> <span class="o">=</span> <span class="kc">None</span>
+
+        <span class="n">Stream</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">source</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">update</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">who</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">oldest</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">oldest</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">min</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">count</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">total</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">count</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">total</span> <span class="o">+</span> <span class="n">x</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">column</span><span class="p">]</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">emit</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">oldest</span><span class="p">,</span> <span class="n">x</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">max</span><span class="p">(),</span> <span class="bp">self</span><span class="o">.</span><span class="n">total</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">count</span><span class="p">))</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">source</span> <span class="o">=</span> <span class="n">Stream</span><span class="p">()</span>
+
+<span class="n">cvs</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">Canvas</span><span class="p">(</span><span class="n">plot_width</span><span class="o">=</span><span class="mi">800</span><span class="p">,</span> <span class="n">plot_height</span><span class="o">=</span><span class="mi">600</span><span class="p">,</span> <span class="n">x_range</span><span class="o">=</span><span class="n">x_range</span><span class="p">,</span> <span class="n">y_range</span><span class="o">=</span><span class="n">y_range</span><span class="p">)</span>
+
+<span class="n">q_days</span> <span class="o">=</span> <span class="n">deque</span><span class="p">(</span><span class="n">maxlen</span><span class="o">=</span><span class="mi">6</span><span class="p">)</span>
+<span class="n">s_days</span> <span class="o">=</span> <span class="n">SlidingWindowImageAggregate</span><span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="n">cvs</span><span class="p">,</span> <span class="s1">'pickup_x'</span><span class="p">,</span> <span class="s1">'pickup_y'</span><span class="p">,</span> <span class="n">ds</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="s1">'total_amount'</span><span class="p">),</span> <span class="n">n</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">cmap</span><span class="o">=</span><span class="n">viridis</span><span class="p">)</span>
+<span class="n">s_days</span><span class="o">.</span><span class="n">sink</span><span class="p">(</span><span class="n">q_days</span><span class="o">.</span><span class="n">append</span><span class="p">)</span>
+
+<span class="n">q_week</span> <span class="o">=</span> <span class="n">deque</span><span class="p">(</span><span class="n">maxlen</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+<span class="n">s_week</span> <span class="o">=</span> <span class="n">SlidingWindowImageAggregate</span><span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="n">cvs</span><span class="p">,</span> <span class="s1">'pickup_x'</span><span class="p">,</span> <span class="s1">'pickup_y'</span><span class="p">,</span> <span class="n">ds</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="s1">'total_amount'</span><span class="p">),</span> <span class="n">n</span><span class="o">=</span><span class="mi">7</span><span class="p">,</span> <span class="n">cmap</span><span class="o">=</span><span class="n">viridis</span><span class="p">)</span>
+<span class="n">s_week</span><span class="o">.</span><span class="n">sink</span><span class="p">(</span><span class="n">q_week</span><span class="o">.</span><span class="n">append</span><span class="p">)</span>
+
+<span class="n">q_avg_passengers</span> <span class="o">=</span> <span class="n">deque</span><span class="p">(</span><span class="n">maxlen</span><span class="o">=</span><span class="mi">7</span><span class="p">)</span>
+<span class="n">s_avg_passengers</span> <span class="o">=</span> <span class="n">CumulativeMean</span><span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="s1">'passenger_count'</span><span class="p">)</span>
+<span class="n">s_avg_passengers</span><span class="o">.</span><span class="n">sink</span><span class="p">(</span><span class="n">q_avg_passengers</span><span class="o">.</span><span class="n">append</span><span class="p">)</span>
+
+<span class="n">q_avg_amount</span> <span class="o">=</span> <span class="n">deque</span><span class="p">(</span><span class="n">maxlen</span><span class="o">=</span><span class="mi">7</span><span class="p">)</span>
+<span class="n">s_avg_amount</span> <span class="o">=</span> <span class="n">CumulativeMean</span><span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="s1">'total_amount'</span><span class="p">)</span>
+<span class="n">s_avg_amount</span><span class="o">.</span><span class="n">sink</span><span class="p">(</span><span class="n">q_avg_amount</span><span class="o">.</span><span class="n">append</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<script type="application/vnd.jupyter.widget-view+json">
+{"model_id": "bd248516e1534508ac4db46015bd7396", "version_major": 2, "version_minor": 0}
+</script></div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">source</span><span class="o">.</span><span class="n">visualize</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<img alt="_images/streaming-aggregation_18_0.png" src="_images/streaming-aggregation_18_0.png">
+</img></div>
+</div>
+</section>
+<section id="push-data-through-streams">
+<h2>Push data through streams<a class="headerlink" href="#push-data-through-streams" title="Permalink to this headline">¶</a></h2>
+<p>We initially push 3 days worth of dataframes through the streams to view partial results.</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">trips_per_day</span> <span class="o">=</span> <span class="n">taxi_trips_stream</span><span class="p">(</span><span class="n">frequency</span><span class="o">=</span><span class="s1">'D'</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">3</span><span class="p">):</span>
+    <span class="n">source</span><span class="o">.</span><span class="n">emit</span><span class="p">(</span><span class="nb">next</span><span class="p">(</span><span class="n">trips_per_day</span><span class="p">))</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output traceback highlight-ipythontb notranslate"><div class="highlight"><pre><span></span><span class="gt">---------------------------------------------------------------------------</span>
+<span class="ne">OverflowError</span><span class="g g-Whitespace">                             </span>Traceback (most recent call last)
+<span class="o">&lt;</span><span class="n">ipython</span><span class="o">-</span><span class="nb">input</span><span class="o">-</span><span class="mi">16</span><span class="o">-</span><span class="n">a524ada15f60</span><span class="o">&gt;</span> <span class="ow">in</span> <span class="o">&lt;</span><span class="n">module</span><span class="o">&gt;</span>
+<span class="g g-Whitespace">      </span><span class="mi">1</span> <span class="n">trips_per_day</span> <span class="o">=</span> <span class="n">taxi_trips_stream</span><span class="p">(</span><span class="n">frequency</span><span class="o">=</span><span class="s1">'D'</span><span class="p">)</span>
+<span class="g g-Whitespace">      </span><span class="mi">2</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">3</span><span class="p">):</span>
+<span class="ne">----&gt; </span><span class="mi">3</span>     <span class="n">source</span><span class="o">.</span><span class="n">emit</span><span class="p">(</span><span class="nb">next</span><span class="p">(</span><span class="n">trips_per_day</span><span class="p">))</span>
+
+<span class="nn">&lt;ipython-input-2-c2c666eddb72&gt;</span> in <span class="ni">taxi_trips_stream</span><span class="nt">(source, frequency)</span>
+<span class="g g-Whitespace">      </span><span class="mi">9</span>         <span class="k">return</span> <span class="n">df</span>
+<span class="g g-Whitespace">     </span><span class="mi">10</span> 
+<span class="ne">---&gt; </span><span class="mi">11</span>     <span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">source</span><span class="p">,</span>
+<span class="g g-Whitespace">     </span><span class="mi">12</span>                      <span class="n">infer_datetime_format</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+<span class="g g-Whitespace">     </span><span class="mi">13</span>                      <span class="n">parse_dates</span><span class="o">=</span><span class="p">[</span><span class="s1">'tpep_pickup_datetime'</span><span class="p">,</span> <span class="s1">'tpep_pickup_datetime'</span><span class="p">])</span>
+
+<span class="nn">/usr/share/miniconda3/envs/test-environment/lib/python3.8/site-packages/pandas/io/parsers.py</span> in <span class="ni">read_csv</span><span class="nt">(filepath_or_buffer, sep, delimiter, header, names, index_col, usecols, squeeze, prefix, mangle_dupe_cols, dtype, engine, converters, true_values, false_values, skipinitialspace, skiprows, skipfooter, nrows, na_values, keep_default_na, na_filter, verbose, skip_blank_lines, parse_dates, infer_datetime_format, keep_date_col, date_parser, dayfirst, cache_dates, iterator, chunksize, compression, thousands, decimal, lineterminator, quotechar, quoting, doublequote, escapechar, comment, encoding, dialect, error_bad_lines, warn_bad_lines, delim_whitespace, low_memory, memory_map, float_precision, storage_options)</span>
+<span class="g g-Whitespace">    </span><span class="mi">608</span>     <span class="n">kwds</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">kwds_defaults</span><span class="p">)</span>
+<span class="g g-Whitespace">    </span><span class="mi">609</span> 
+<span class="ne">--&gt; </span><span class="mi">610</span>     <span class="k">return</span> <span class="n">_read</span><span class="p">(</span><span class="n">filepath_or_buffer</span><span class="p">,</span> <span class="n">kwds</span><span class="p">)</span>
+<span class="g g-Whitespace">    </span><span class="mi">611</span> 
+<span class="g g-Whitespace">    </span><span class="mi">612</span> 
+
+<span class="nn">/usr/share/miniconda3/envs/test-environment/lib/python3.8/site-packages/pandas/io/parsers.py</span> in <span class="ni">_read</span><span class="nt">(filepath_or_buffer, kwds)</span>
+<span class="g g-Whitespace">    </span><span class="mi">466</span> 
+<span class="g g-Whitespace">    </span><span class="mi">467</span>     <span class="k">with</span> <span class="n">parser</span><span class="p">:</span>
+<span class="ne">--&gt; </span><span class="mi">468</span>         <span class="k">return</span> <span class="n">parser</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">nrows</span><span class="p">)</span>
+<span class="g g-Whitespace">    </span><span class="mi">469</span> 
+<span class="g g-Whitespace">    </span><span class="mi">470</span> 
+
+<span class="nn">/usr/share/miniconda3/envs/test-environment/lib/python3.8/site-packages/pandas/io/parsers.py</span> in <span class="ni">read</span><span class="nt">(self, nrows)</span>
+<span class="g g-Whitespace">   </span><span class="mi">1055</span>     <span class="k">def</span> <span class="nf">read</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">nrows</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="g g-Whitespace">   </span><span class="mi">1056</span>         <span class="n">nrows</span> <span class="o">=</span> <span class="n">validate_integer</span><span class="p">(</span><span class="s2">"nrows"</span><span class="p">,</span> <span class="n">nrows</span><span class="p">)</span>
+<span class="ne">-&gt; </span><span class="mi">1057</span>         <span class="n">index</span><span class="p">,</span> <span class="n">columns</span><span class="p">,</span> <span class="n">col_dict</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_engine</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">nrows</span><span class="p">)</span>
+<span class="g g-Whitespace">   </span><span class="mi">1058</span> 
+<span class="g g-Whitespace">   </span><span class="mi">1059</span>         <span class="k">if</span> <span class="n">index</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+
+<span class="nn">/usr/share/miniconda3/envs/test-environment/lib/python3.8/site-packages/pandas/io/parsers.py</span> in <span class="ni">read</span><span class="nt">(self, nrows)</span>
+<span class="g g-Whitespace">   </span><span class="mi">2136</span>             <span class="n">data</span> <span class="o">=</span> <span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="n">v</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">v</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">names</span><span class="p">,</span> <span class="n">data</span><span class="p">)}</span>
+<span class="g g-Whitespace">   </span><span class="mi">2137</span> 
+<span class="ne">-&gt; </span><span class="mi">2138</span>             <span class="n">names</span><span class="p">,</span> <span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_do_date_conversions</span><span class="p">(</span><span class="n">names</span><span class="p">,</span> <span class="n">data</span><span class="p">)</span>
+<span class="g g-Whitespace">   </span><span class="mi">2139</span>             <span class="n">index</span><span class="p">,</span> <span class="n">names</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_make_index</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">alldata</span><span class="p">,</span> <span class="n">names</span><span class="p">)</span>
+<span class="g g-Whitespace">   </span><span class="mi">2140</span> 
+
+<span class="nn">/usr/share/miniconda3/envs/test-environment/lib/python3.8/site-packages/pandas/io/parsers.py</span> in <span class="ni">_do_date_conversions</span><span class="nt">(self, names, data)</span>
+<span class="g g-Whitespace">   </span><span class="mi">1837</span> 
+<span class="g g-Whitespace">   </span><span class="mi">1838</span>         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">parse_dates</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+<span class="ne">-&gt; </span><span class="mi">1839</span>             <span class="n">data</span><span class="p">,</span> <span class="n">names</span> <span class="o">=</span> <span class="n">_process_date_conversion</span><span class="p">(</span>
+<span class="g g-Whitespace">   </span><span class="mi">1840</span>                 <span class="n">data</span><span class="p">,</span>
+<span class="g g-Whitespace">   </span><span class="mi">1841</span>                 <span class="bp">self</span><span class="o">.</span><span class="n">_date_conv</span><span class="p">,</span>
+
+<span class="nn">/usr/share/miniconda3/envs/test-environment/lib/python3.8/site-packages/pandas/io/parsers.py</span> in <span class="ni">_process_date_conversion</span><span class="nt">(data_dict, converter, parse_spec, index_col, index_names, columns, keep_date_col)</span>
+<span class="g g-Whitespace">   </span><span class="mi">3375</span>                 <span class="k">if</span> <span class="n">_isindex</span><span class="p">(</span><span class="n">colspec</span><span class="p">):</span>
+<span class="g g-Whitespace">   </span><span class="mi">3376</span>                     <span class="k">continue</span>
+<span class="ne">-&gt; </span><span class="mi">3377</span>                 <span class="n">data_dict</span><span class="p">[</span><span class="n">colspec</span><span class="p">]</span> <span class="o">=</span> <span class="n">converter</span><span class="p">(</span><span class="n">data_dict</span><span class="p">[</span><span class="n">colspec</span><span class="p">])</span>
+<span class="g g-Whitespace">   </span><span class="mi">3378</span>             <span class="k">else</span><span class="p">:</span>
+<span class="g g-Whitespace">   </span><span class="mi">3379</span>                 <span class="n">new_name</span><span class="p">,</span> <span class="n">col</span><span class="p">,</span> <span class="n">old_names</span> <span class="o">=</span> <span class="n">_try_convert_dates</span><span class="p">(</span>
+
+<span class="nn">/usr/share/miniconda3/envs/test-environment/lib/python3.8/site-packages/pandas/io/parsers.py</span> in <span class="ni">converter</span><span class="nt">(*date_cols)</span>
+<span class="g g-Whitespace">   </span><span class="mi">3302</span>     <span class="k">def</span> <span class="nf">converter</span><span class="p">(</span><span class="o">*</span><span class="n">date_cols</span><span class="p">):</span>
+<span class="g g-Whitespace">   </span><span class="mi">3303</span>         <span class="k">if</span> <span class="n">date_parser</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+<span class="ne">-&gt; </span><span class="mi">3304</span>             <span class="n">strs</span> <span class="o">=</span> <span class="n">parsing</span><span class="o">.</span><span class="n">concat_date_cols</span><span class="p">(</span><span class="n">date_cols</span><span class="p">)</span>
+<span class="g g-Whitespace">   </span><span class="mi">3305</span> 
+<span class="g g-Whitespace">   </span><span class="mi">3306</span>             <span class="k">try</span><span class="p">:</span>
+
+<span class="nn">pandas/_libs/tslibs/parsing.pyx</span> in <span class="ni">pandas._libs.tslibs.parsing.concat_date_cols</span><span class="nt">()</span>
+
+<span class="nn">pandas/_libs/tslibs/parsing.pyx</span> in <span class="ni">pandas._libs.tslibs.parsing.convert_to_unicode</span><span class="nt">()</span>
+
+<span class="ne">OverflowError</span>: value too large to convert to int
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">tf</span><span class="o">.</span><span class="n">Images</span><span class="p">(</span><span class="o">*</span><span class="nb">list</span><span class="p">(</span><span class="n">q_week</span><span class="p">))</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">4</span><span class="p">):</span>
+    <span class="n">source</span><span class="o">.</span><span class="n">emit</span><span class="p">(</span><span class="nb">next</span><span class="p">(</span><span class="n">trips_per_day</span><span class="p">))</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">tf</span><span class="o">.</span><span class="n">Images</span><span class="p">(</span><span class="o">*</span><span class="nb">list</span><span class="p">(</span><span class="n">q_week</span><span class="p">))</span>
+</pre></div>
+</div>
+</div>
+</div>
+<section id="cumulative-average-of-passengers-ordered-by-oldest-first">
+<h3>Cumulative average of passengers (ordered by oldest first)<a class="headerlink" href="#cumulative-average-of-passengers-ordered-by-oldest-first" title="Permalink to this headline">¶</a></h3>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">show_queue</span><span class="p">(</span><span class="n">q_avg_passengers</span><span class="p">,</span> <span class="s1">'cumulative average passengers'</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</div>
+</section>
+<section id="cumulative-average-of-total-fare-ordered-by-oldest-first">
+<h3>Cumulative average of total fare (ordered by oldest first)<a class="headerlink" href="#cumulative-average-of-total-fare-ordered-by-oldest-first" title="Permalink to this headline">¶</a></h3>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">show_queue</span><span class="p">(</span><span class="n">q_avg_amount</span><span class="p">,</span> <span class="s1">'cumulative average total fare'</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</div>
+</section>
+<section id="history-of-2-day-aggregations-ordered-by-oldest-first">
+<h3>History of 2-day aggregations (ordered by oldest first)<a class="headerlink" href="#history-of-2-day-aggregations-ordered-by-oldest-first" title="Permalink to this headline">¶</a></h3>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">tf</span><span class="o">.</span><span class="n">Images</span><span class="p">(</span><span class="o">*</span><span class="nb">list</span><span class="p">(</span><span class="n">q_days</span><span class="p">))</span>
+</pre></div>
+</div>
+</div>
+</div>
+</section>
+<section id="current-1-week-aggregation">
+<h3>Current 1-week aggregation<a class="headerlink" href="#current-1-week-aggregation" title="Permalink to this headline">¶</a></h3>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">tf</span><span class="o">.</span><span class="n">Images</span><span class="p">(</span><span class="o">*</span><span class="nb">list</span><span class="p">(</span><span class="n">q_week</span><span class="p">))</span>
+</pre></div>
+</div>
+</div>
+</div>
+<p>Now we get the next day’s worth of data and see how the streams have updated.</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">source</span><span class="o">.</span><span class="n">emit</span><span class="p">(</span><span class="nb">next</span><span class="p">(</span><span class="n">trips_per_day</span><span class="p">))</span>
+</pre></div>
+</div>
+</div>
+</div>
+</section>
+<section id="id1">
+<h3>Cumulative average of passengers (ordered by oldest first)<a class="headerlink" href="#id1" title="Permalink to this headline">¶</a></h3>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">show_queue</span><span class="p">(</span><span class="n">q_avg_passengers</span><span class="p">,</span> <span class="s1">'cumulative average passengers'</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</div>
+</section>
+<section id="id2">
+<h3>Cumulative average of total fare (ordered by oldest first)<a class="headerlink" href="#id2" title="Permalink to this headline">¶</a></h3>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">show_queue</span><span class="p">(</span><span class="n">q_avg_amount</span><span class="p">,</span> <span class="s1">'cumulative average total fare'</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</div>
+</section>
+<section id="id3">
+<h3>History of 2-day aggregations (ordered by oldest first)<a class="headerlink" href="#id3" title="Permalink to this headline">¶</a></h3>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">tf</span><span class="o">.</span><span class="n">Images</span><span class="p">(</span><span class="o">*</span><span class="nb">list</span><span class="p">(</span><span class="n">q_days</span><span class="p">))</span>
+</pre></div>
+</div>
+</div>
+</div>
+</section>
+<section id="id4">
+<h3>Current 1-week aggregation<a class="headerlink" href="#id4" title="Permalink to this headline">¶</a></h3>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">tf</span><span class="o">.</span><span class="n">Images</span><span class="p">(</span><span class="o">*</span><span class="nb">list</span><span class="p">(</span><span class="n">q_week</span><span class="p">))</span>
+</pre></div>
+</div>
+</div>
+</div>
+</section>
+</section>
+<div id="scroller-right">This web page was generated from a Jupyter notebook and not all interactivity will work on this website. <a href="https://raw.githubusercontent.com/holoviz/datashader/master/examples/streaming-aggregation.ipynb">Right click to download and run locally</a> for full Python-backed interactivity.</div><hr class="docutils"/>
+<p><a class="reference external" href="https://raw.githubusercontent.com/holoviz/panel/master/examples/streaming-aggregation.ipynb">Right click to download this notebook from GitHub.</a></p>
+</section>
+</div>
+</div>
+<!-- END MAIN BODY OF DOCS ––––––––––––– -->
+<footer class="footer">
+<div class="footer-links">
+<ul>
+<li><span class="footer-title">Links</span></li>
+<li><a href="getting_started/index.html">Getting Started</a></li>
+<li><a href="user_guide/index.html">User Guide</a></li>
+<li><a href="topics/index.html">Topics</a></li>
+<li><a href="api.html">API</a></li>
+<li><a href="FAQ.html">FAQ</a></li>
+<li><a href="about.html">About</a></li>
+</ul>
+<ul>
+<li><span class="footer-title">Join Us</span></li>
+<li><a href="https://github.com/holoviz/datashader/">Github</a></li>
+<li><a href="https://twitter.com/datashader/">Twitter</a></li>
+<li><a href="https://discourse.holoviz.org/">Discourse</a></li>
+<li><a href="https://holoviz.org">HoloViz</a></li>
+</ul>
+<ul class="copyright">
+<li>2016-2021, Anaconda, Inc.</li>
+</ul>
+</div>
+</footer>
+<!-- Google Analytics -->
+<!-- Global site tag (gtag.js) - Google Analytics -->
+<script async="" src="https://www.googletagmanager.com/gtag/js?id=UA-154795830-1"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'UA-154795830-1', { 'anonymize_ip': true });
+</script>
+<!-- MathJax Config -->
+<script type="text/x-mathjax-config">
+MathJax.Hub.Config({
+  tex2jax: {inlineMath: [['$','$'], ['\\(','\\)']]}
+});
+</script>
+<!-- End Document
+  –––––––––––––––––––––––––––––––––––––––––––––––––– -->
+</body>
+</html>

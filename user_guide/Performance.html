@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<!-- Basic Page Needs
+  –––––––––––––––––––––––––––––––––––––––––––––––––– -->
+<meta charset="utf-8"/>
+<title>Performance — Datashader 0.13.0 documentation</title>
+<meta content="Turns even the largest data into images, accurately." name="description"/>
+<meta content="Datashader contributors" name="author"/>
+<!-- Mobile Specific Metas
+  –––––––––––––––––––––––––––––––––––––––––––––––––– -->
+<meta content="width=device-width, initial-scale=1" name="viewport"/>
+<!-- FONT
+  –––––––––––––––––––––––––––––––––––––––––––––––––– -->
+<script src="https://ajax.googleapis.com/ajax/libs/webfont/1.6.16/webfont.js"></script>
+<script>
+    WebFont.load({
+      google: {
+        families: ['Source Sans Pro']
+      }
+    });
+  </script>
+<!-- CSS
+  –––––––––––––––––––––––––––––––––––––––––––––––––– -->
+<link href="../_static/css/main.css" rel="stylesheet"/>
+<link href="../_static/nbsite.css" rel="stylesheet"/>
+<!-- Scripts
+  –––––––––––––––––––––––––––––––––––––––––––––––––– -->
+<script src="//ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
+<script async="" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-MML-AM_CHTML" type="text/javascript">
+</script>
+<script src="../_static/js/main.js"></script>
+<script src="../_static/nbsite.js"></script>
+<script src="../_static/require.js"></script>
+<!-- Favicon
+  –––––––––––––––––––––––––––––––––––––––––––––––––– -->
+<link href="../_static/favicon.ico" rel="icon" type="image/png"/>
+<!-- Canonical
+  –––––––––––––––––––––––––––––––––––––––––––––––––– -->
+<link href="/user_guide/Performance.html" rel="canonical">
+</link></head>
+<body class="">
+<header class="navigation">
+<div class="wrapper">
+<a class="logo" href="../index.html">
+<img alt="Logo" src="../_static/logo_horizontal.svg"/>
+</a>
+<a class="navigation-menu-button" href="javascript:void(0)" id="js-mobile-menu">Menu</a>
+<nav>
+<ul class="navigation-menu show" id="js-navigation-menu">
+<li class="nav-link doc-head"><a href="https://github.com/holoviz/datashader/">Github</a></li>
+<li class="nav-link doc-head"><a href="https://twitter.com/datashader/">Twitter</a></li>
+<li class="nav-link doc-head"><a href="https://discourse.holoviz.org/">Discourse</a></li>
+<li class="nav-link doc-head"><a href="https://holoviz.org">HoloViz</a></li>
+<li class="nav-link">
+<div style="display:inline-block;vertical-align: middle;">
+<div class="search-bar">
+<form action="../search.html" method="get" role="search">
+<input name="q" placeholder="Search" type="search"/>
+<button type="submit">
+<img alt="Search Icon" src="https://raw.githubusercontent.com/thoughtbot/refills/master/source/images/search-icon-black.png"/>
+</button>
+</form>
+</div>
+</div>
+</li>
+</ul>
+</nav>
+</div>
+</header>
+<div class="second-nav">
+<nav>
+<ul class="navigation-menu show">
+<li class="nav-link doc-head"><a href="../getting_started/index.html">Getting Started</a></li>
+<li class="nav-link doc-head"><a href="index.html">User Guide</a></li>
+<li class="nav-link doc-head"><a href="../topics/index.html">Topics</a></li>
+<li class="nav-link doc-head"><a href="../api.html">API</a></li>
+<li class="nav-link doc-head"><a href="../FAQ.html">FAQ</a></li>
+<li class="nav-link doc-head"><a href="../about.html">About</a></li>
+</ul>
+</nav>
+</div>
+<!-- MAIN BODY OF DOCS –––––––––––––––––– -->
+<div class="docs section">
+<div id="hacketyhackhack"> <!-- style="width:20%;margin-right: 100px;"> --> <!--style="display: none;"> style="display:none;"> -->
+<div class="toc" style="width:15%; margin-right:20px;">
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../index.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../getting_started/index.html">Getting Started</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">User Guide</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="Plotting_Pitfalls.html">Plotting Pitfalls</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Points.html">Points</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Timeseries.html">Timeseries</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Trajectories.html">Trajectories</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Grids.html">Grids</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Trimesh.html">Trimesh</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Networks.html">Networks</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Geography.html">Geography</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Extending.html">Extending</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Performance</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#file-formats">File formats</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#data-objects">Data objects</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#using-dask-efficiently">Using Dask efficiently</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../topics/index.html">Topics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../api.html">API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../FAQ.html">FAQ</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../about.html">About</a></li>
+</ul>
+</div>
+</div>
+<div class="content"> <!-- style="max-width:80%;margin-left:auto;margin-right: auto;">-->
+<section id="performance">
+<h1>Performance<a class="headerlink" href="#performance" title="Permalink to this headline">¶</a></h1>
+<p>Datashader is designed to make it simple to work with even very large
+datasets. To get good performance, it is essential that each step in the
+overall processing pipeline be set up appropriately. Below we share some
+of our suggestions based on our own <a class="reference external" href="https://github.com/holoviz/datashader/issues/313">benchmarking</a> and optimization
+experience, which should help you obtain suitable performance in your
+own work.</p>
+<section id="file-formats">
+<h2>File formats<a class="headerlink" href="#file-formats" title="Permalink to this headline">¶</a></h2>
+<p>Based on our <a class="reference external" href="https://github.com/holoviz/datashader/issues/129">testing with various file formats</a>, we recommend storing
+any large columnar datasets in the <a class="reference external" href="https://parquet.apache.org/">Apache Parquet</a> format when
+possible, using the <a class="reference external" href="https://github.com/dask/fastparquet">fastparquet</a> library with <a class="reference external" href="https://github.com/andrix/python-snappy">Snappy</a> compression:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">dask.dataframe</span> <span class="k">as</span> <span class="nn">dd</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">dd</span><span class="o">.</span><span class="n">to_parquet</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">df</span><span class="p">,</span> <span class="n">compression</span><span class="o">=</span><span class="s2">"SNAPPY"</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>If your data includes categorical values that take on a limited, fixed
+number of possible values (e.g. “Male”, “Female”),
+Parquet’s categorical columns use a more memory-efficient data representation and
+are optimized for common operations such as sorting and finding uniques.
+Before saving, just convert the column as follows:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">df</span><span class="p">[</span><span class="n">colname</span><span class="p">]</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="n">colname</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s1">'category'</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>By default, numerical datasets typically use 64-bit floats, but many
+applications do not require 64-bit precision when aggregating over a
+very large number of datapoints to show a distribution. Using 32-bit
+floats reduces storage and memory requirements in half, and also
+typically greatly speeds up computations because only half as much data
+needs to be accessed in memory. If applicable to your particular
+situation, just convert the data type before generating the file:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">df</span><span class="p">[</span><span class="n">colname</span><span class="p">]</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="n">colname</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="data-objects">
+<h2>Data objects<a class="headerlink" href="#data-objects" title="Permalink to this headline">¶</a></h2>
+<p>Datashader performance will vary significantly depending on the library and specific data object type used to represent the data in Python, because different libraries and data objects have very different abilities to use the available processing power and memory. Moreover, different libraries and objects are appropriate for different types of data, due to how they organize and store the data internally as well as the operations they provide for working with the data. The various data container objects available from the supported libraries all fall into one of the following three types of data structures:</p>
+<ul class="simple">
+<li><p><strong><a class="reference external" href="https://pandas.pydata.org/pandas-docs/stable/getting_started/overview.html">Columnar (tabular) data</a></strong>: Relational, table-like data consisting of arbitrarily many rows, each with data for a fixed number of columns. For example, if you track the location of a particular cell phone over time, each time sampled would be a row, and for each time there could be columns for the latitude and longitude for the location at that time.</p></li>
+<li><p><strong><a class="reference external" href="http://xarray.pydata.org/en/stable/why-xarray.html">n-D arrays (multidimensional data)</a></strong>: Data laid out in <em>n</em> dimensions, where <em>n</em> is typically &gt;1.  For example, you might have the precipitation measured on a latitude and longitude grid covering the whole world, for every time at which precipitation was measured. Such data could be stored columnarly, but it would be very inefficient; instead it is stored as a three dimensional array of precipitation values, indexed with time, latitude, and longitude.</p></li>
+<li><p><strong><a class="reference external" href="https://en.wikipedia.org/wiki/Jagged_array">Ragged arrays</a></strong>: Relational/columnar data where the value of at least one column is a list of values that could vary in length for each row. For example, you may have a table with one row per US state and columns for population, land area, and the geographic shape of that state.  Here the shape would be stored as a polygon consisting of an arbitrarily long list of latitude and longitude coordinates, which does not fit efficiently into a standard columnar data structure due to its ragged (variable length) nature.</p></li>
+</ul>
+<p>As you can see, all three examples include latitude and longitude values, but they are very different data structures that need to be stored differently for them to be processed efficiently.</p>
+<p>Apart from the data structure involved, the data libraries and objects differ by how they handle computation:</p>
+<ul class="simple">
+<li><p><strong>Single-core CPU</strong>: All processing is done serially on a single core of a single CPU on one machine. This is the most common and straightforward implementation, but the slowest, as there are generally other processing resources available that could be used.</p></li>
+<li><p><strong>Multi-core CPU</strong>: All processing is done on a single CPU, but using multiple threads running on multiple separate cores. This approach is able to make use of all of the CPU resources available on a given machine, but cannot use multiple machines.</p></li>
+<li><p><strong>Distributed CPU</strong>: Processing is distributed across multiple cores that may be on multiple CPUs in a cluster or a set of cloud-based machines. This approach can be much faster than single-CPU approaches when many CPUs are available. Distributed approaches also normally support multi-core usage, utilizing multiple cores on a single or on multiple CPUs.</p></li>
+<li><p><strong>GPU</strong>: Processing is done not on the CPU but on a separate general-purpose graphics-processing unit (GP-GPU). The GPU typically has far more (though individually less powerful) cores available than a CPU does, and for highly parallelizable computations like those in Datashader a GPU can typically achieve much faster performance at a given price point than a CPU or distributed set of CPUs can. However, not all machines have a supported GPU, memory available on the GPU is often limited, and it takes special effort to support a GPU (e.g. to avoid expensive copying of data between CPU and GPU memory), and so not all CPU code has been rewritten appropriately.</p></li>
+<li><p><strong>Distributed GPUs</strong>: When there are multiple GPUs available, processing can be distributed across all of the GPUs to further speed it up or to fit large problems into the larger total amount of GPU memory available across all of them.</p></li>
+</ul>
+<p>Finally, libraries differ by whether they can handle datasets larger than memory:</p>
+<ul class="simple">
+<li><p><strong>In-core processing</strong>: All data must fit into the directly addressable memory space available (e.g. RAM for a CPU); larger datasets have to be explicitly split up and processed separately.</p></li>
+<li><p><strong>Out-of-core processing</strong>: The data library can process data in chunks that it reads in as needed, allowing it to work with data much larger than the available memory (at the cost of having to read in those chunks each time they are needed, instead of simply referring to the data in memory).</p></li>
+</ul>
+<p>Given all of these options, the data objects currently supported by Datashader are:</p>
+<style type="text/css">.arbit .trary a { color: inherit; }.arbit .trary
+.sL{text-align:center;padding:2px 2px 2px 2px;background-color:#ffffff;font-weight:bold;width:60px}.arbit .trary
+.sG{text-align:center;padding:2px 2px 2px 2px;background-color:#ffffff;font-weight:bold;font-family:monospace}.arbit .trary
+.sY{text-align:center;padding:2px 2px 2px 2px;background-color:#b7e1cd;}.arbit .trary 
+.sN{text-align:center;padding:2px 2px 2px 2px;background-color:#f4c7c3;}.arbit .trary
+.sM{text-align:center;padding:2px 2px 2px 2px;background-color:#fce8b2;}.arbit .trary
+</style>
+<div class="arbit">
+<table cellpadding="0" cellspacing="0" class="trary">
+<thead>
+<tr>
+<th class="sG">Data object</th>
+<th class="sG">Structure</th>
+<th class="sG">Compute</th>
+<th class="sG">Memory</th>
+<th class="sG">Description</th>
+<th class="sG">points</th>
+<th class="sG">line</th>
+<th class="sG">area</th>
+<th class="sG">trimesh</th>
+<th class="sG">raster</th>
+<th class="sG">quadmesh</th>
+<th class="sG">polygons</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="sL"><a href="https://pandas.pydata.org">Pandas DF</a></td>
+<td>columnar</td>
+<td>1-core CPU</td>
+<td>in-core</td>
+<td>Standard dataframes</td>
+<td class="sY">Yes</td>
+<td class="sY">Yes</td>
+<td class="sY">Yes</td>
+<td class="sY">Yes</td>
+<td class="sM">-</td>
+<td class="sM">-</td>
+<td class="sM">-</td>
+</tr>
+<tr>
+<td class="sL"><a href="https://dask.org">DaskDF + PandasDF</a></td>
+<td>columnar</td>
+<td>distributed CPU</td>
+<td>out-of-core</td>
+<td>Distributed DataFrames</td>
+<td class="sY">Yes</td>
+<td class="sY">Yes</td>
+<td class="sY">Yes</td>
+<td class="sY">Yes</td>
+<td class="sM">-</td>
+<td class="sM">-</td>
+<td class="sM">-</td>
+</tr>
+<tr>
+<td class="sL"><a href="https://github.com/rapidsai/cudf">cuDF</a></td>
+<td>columnar</td>
+<td>single GPU</td>
+<td>in-core</td>
+<td>NVIDIA GPU DataFrames</td>
+<td class="sY">Yes</td>
+<td class="sY">Yes</td>
+<td class="sY">Yes</td>
+<td class="sN">No</td>
+<td class="sM">-</td>
+<td class="sM">-</td>
+<td class="sM">-</td>
+</tr>
+<tr>
+<td class="sL"><a href="https://docs.rapids.ai/api/cudf/stable/10min.html">DaskDF + cuDF</a></td>
+<td>columnar</td>
+<td>distributed GPU</td>
+<td>out-of-core</td>
+<td>Distributed NVIDIA GPUs</td>
+<td class="sY">Yes</td>
+<td class="sY">Yes</td>
+<td class="sY">Yes</td>
+<td class="sN">No</td>
+<td class="sM">-</td>
+<td class="sM">-</td>
+<td class="sM">-</td>
+</tr>
+<tr>
+<td class="sL"><a href="https://github.com/holoviz/spatialpandas">SpatialPandasDF</a></td>
+<td>ragged</td>
+<td>1-core CPU</td>
+<td>in-core</td>
+<td>Ragged + spatial indexing</td>
+<td class="sY">Yes</td>
+<td class="sY">Yes</td>
+<td class="sM">-</td>
+<td class="sM">-</td>
+<td class="sM">-</td>
+<td class="sM">-</td>
+<td class="sY">Yes</td>
+</tr>
+<tr>
+<td class="sL"><a href="https://github.com/holoviz/spatialpandas">Dask + SpatialPandasDF</a></td>
+<td>ragged</td>
+<td>distributed CPU</td>
+<td>out-of-core</td>
+<td>Distributed ragged arrays</td>
+<td class="sY">Yes</td>
+<td class="sY">Yes</td>
+<td class="sM">-</td>
+<td class="sM">-</td>
+<td class="sM">-</td>
+<td class="sM">-</td>
+<td class="sY">Yes</td>
+</tr>
+<tr>
+<td class="sL"><a href="http://xarray.pydata.org">Xarray + NumPy</a></td>
+<td>n-D</td>
+<td>1-core CPU</td>
+<td>in-core</td>
+<td>n-D CPU arrays</td>
+<td class="sN">No</td>
+<td class="sN">No</td>
+<td class="sN">No</td>
+<td class="sN">No</td>
+<td class="sY">Yes</td>
+<td class="sY">Yes</td>
+<td class="sM">-</td>
+</tr>
+<tr>
+<td class="sL"><a href="(https://dask.org">Xarray+DaskArray</a></td>
+<td>n-D</td>
+<td>distributed CPU</td>
+<td>out-of-core</td>
+<td>Distributed n-D arrays</td>
+<td class="sN">No</td>
+<td class="sN">No</td>
+<td class="sN">No</td>
+<td class="sN">No</td>
+<td class="sY">Yes</td>
+<td class="sY">Yes</td>
+<td class="sM">-</td>
+</tr>
+<tr>
+<td class="sL"><a href="https://cupy.chainer.org">Xarray+CuPy</a></td>
+<td>n-D</td>
+<td>single GPU</td>
+<td>in-core</td>
+<td>Single-GPU n-D arrays</td>
+<td class="sN">No</td>
+<td class="sN">No</td>
+<td class="sN">No</td>
+<td class="sN">No</td>
+<td class="sN">No</td>
+<td class="sY">Yes</td>
+<td class="sM">-</td>
+</tr>
+</tbody></table></div>
+<p>The right half of this table shows which of Datashader’s glyph types (<code class="docutils literal notranslate"><span class="pre">Canvas.points</span></code>, <code class="docutils literal notranslate"><span class="pre">Canvas.line</span></code>, etc.) are supported for that type of data object. Nearly all glyphs are supported where they would naturally apply, listed using the key:</p>
+<ul class="simple">
+<li><p><strong>Yes</strong>: Supported</p></li>
+<li><p><strong>No</strong>: Not (yet) supported, but could be with sufficient development effort (feel free to contribute effort or funding!)</p></li>
+<li><p><strong>-</strong>: Not supported because that combination is not normally appropriate or useful (e.g. columnar data libraries do not currently provide efficient multidimensional array support)</p></li>
+</ul>
+<p>In general, all it takes to use the indicated data object for a particular glyph type is to instantiate a DataFrame (Pandas, Dask, cuDF, SpatialPandas) or DataArray/DataSet (Xarray), and then pass it to the appropriate <code class="docutils literal notranslate"><span class="pre">ds.Canvas</span></code> method call, as illustrated in the various examples in the user guide and topics.</p>
+<p>Be sure to consider whether a different <code class="docutils literal notranslate"><span class="pre">ds.Canvas</span></code> method might work for your data, if the obvious one does not support the features you want.  For instance, the <code class="docutils literal notranslate"><span class="pre">Canvas.quadmesh</span></code> glyph for irregularly spaced raster-like data also accepts regular rasters as a special case, and it includes optimization for that special case so that it can process such data efficiently on CPUs and GPUs. So if the features provided by <code class="docutils literal notranslate"><span class="pre">quadmesh</span></code> are sufficient for your raster processing, you may be able to use that method to get faster results on GPUs, which are not currently supported by <code class="docutils literal notranslate"><span class="pre">Canvas.raster</span></code>.</p>
+</section>
+<section id="using-dask-efficiently">
+<h2>Using Dask efficiently<a class="headerlink" href="#using-dask-efficiently" title="Permalink to this headline">¶</a></h2>
+<p>Even on a single machine, a Dask DataFrame
+typically give higher performance than Pandas, because it
+makes good use of all available cores, and it also supports out-of-core
+operation for datasets larger than memory.</p>
+<p>Dasks works on chunks of the data at any one time, called partitions.
+With Dask on a single machine, a rule of thumb for the number of
+partitions to use is <code class="docutils literal notranslate"><span class="pre">multiprocessing.cpu_count()</span></code>, which allows Dask to
+use one thread per core for parallelizing computations.</p>
+<p>When the entire dataset fits into memory at once, you can (and should) persist the
+data as a Dask dataframe prior to passing it into Datashader, to ensure
+that data only needs to be loaded once:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">dask</span> <span class="kn">import</span> <span class="n">dataframe</span> <span class="k">as</span> <span class="n">dd</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">multiprocessing</span> <span class="k">as</span> <span class="nn">mp</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">dask_df</span> <span class="o">=</span> <span class="n">dd</span><span class="o">.</span><span class="n">from_pandas</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">npartitions</span><span class="o">=</span><span class="n">mp</span><span class="o">.</span><span class="n">cpu_count</span><span class="p">())</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">dask_df</span><span class="o">.</span><span class="n">persist</span><span class="p">()</span>
+<span class="gp">...</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">cvs</span> <span class="o">=</span> <span class="n">datashader</span><span class="o">.</span><span class="n">Canvas</span><span class="p">(</span><span class="o">...</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">agg</span> <span class="o">=</span> <span class="n">cvs</span><span class="o">.</span><span class="n">points</span><span class="p">(</span><span class="n">dask_df</span><span class="p">,</span> <span class="o">...</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<div id="scroller-right">This web page was generated from a Jupyter notebook and not all interactivity will work on this website. <a href="https://raw.githubusercontent.com/holoviz/datashader/master/examples/user_guide/10_Performance.ipynb">Right click to download and run locally</a> for full Python-backed interactivity.</div><hr class="docutils"/>
+<p><a class="reference external" href="https://raw.githubusercontent.com/holoviz/panel/master/examples/user_guide/10_Performance.ipynb">Right click to download this notebook from GitHub.</a></p>
+</section>
+</div>
+</div>
+<!-- END MAIN BODY OF DOCS ––––––––––––– -->
+<footer class="footer">
+<div class="footer-links">
+<ul>
+<li><span class="footer-title">Links</span></li>
+<li><a href="../getting_started/index.html">Getting Started</a></li>
+<li><a href="index.html">User Guide</a></li>
+<li><a href="../topics/index.html">Topics</a></li>
+<li><a href="../api.html">API</a></li>
+<li><a href="../FAQ.html">FAQ</a></li>
+<li><a href="../about.html">About</a></li>
+</ul>
+<ul>
+<li><span class="footer-title">Join Us</span></li>
+<li><a href="https://github.com/holoviz/datashader/">Github</a></li>
+<li><a href="https://twitter.com/datashader/">Twitter</a></li>
+<li><a href="https://discourse.holoviz.org/">Discourse</a></li>
+<li><a href="https://holoviz.org">HoloViz</a></li>
+</ul>
+<ul class="copyright">
+<li>2016-2021, Anaconda, Inc.</li>
+</ul>
+</div>
+</footer>
+<!-- Google Analytics -->
+<!-- Global site tag (gtag.js) - Google Analytics -->
+<script async="" src="https://www.googletagmanager.com/gtag/js?id=UA-154795830-1"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'UA-154795830-1', { 'anonymize_ip': true });
+</script>
+<!-- MathJax Config -->
+<script type="text/x-mathjax-config">
+MathJax.Hub.Config({
+  tex2jax: {inlineMath: [['$','$'], ['\\(','\\)']]}
+});
+</script>
+<!-- End Document
+  –––––––––––––––––––––––––––––––––––––––––––––––––– -->
+</body>
+</html>
