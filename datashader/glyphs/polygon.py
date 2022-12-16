@@ -5,15 +5,22 @@ from datashader.glyphs.line import _build_map_onto_pixel_for_line
 from datashader.glyphs.points import _GeometryLike
 from datashader.utils import ngjit
 
+try:
+    import spatialpandas
+except Exception:
+    spatialpandas = None
+
 
 class PolygonGeom(_GeometryLike):
+    # spatialpandas must be available if a PolygonGeom object is created.
+
     @property
     def geom_dtypes(self):
         from spatialpandas.geometry import PolygonDtype, MultiPolygonDtype
         return PolygonDtype, MultiPolygonDtype
 
     @memoize
-    def _build_extend(self, x_mapper, y_mapper, info, append):
+    def _build_extend(self, x_mapper, y_mapper, info, append, antialias_stage_2):
         expand_aggs_and_cols = self.expand_aggs_and_cols(append)
         map_onto_pixel = _build_map_onto_pixel_for_line(x_mapper, y_mapper)
         draw_polygon = _build_draw_polygon(

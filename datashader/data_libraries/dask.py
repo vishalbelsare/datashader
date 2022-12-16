@@ -1,4 +1,4 @@
-from __future__ import absolute_import, division
+from __future__ import annotations
 
 from collections import OrderedDict
 import numpy as np
@@ -9,7 +9,7 @@ import dask.dataframe as dd
 from dask.base import tokenize, compute
 
 from datashader.core import bypixel
-from datashader.compatibility import apply
+from datashader.utils import apply
 from datashader.compiler import compile_components
 from datashader.glyphs import Glyph, LineAxis0
 from datashader.utils import Dispatcher
@@ -18,8 +18,8 @@ __all__ = ()
 
 
 @bypixel.pipeline.register(dd.DataFrame)
-def dask_pipeline(df, schema, canvas, glyph, summary, cuda=False):
-    dsk, name = glyph_dispatch(glyph, df, schema, canvas, summary, cuda=cuda)
+def dask_pipeline(df, schema, canvas, glyph, summary, *, antialias=False, cuda=False):
+    dsk, name = glyph_dispatch(glyph, df, schema, canvas, summary, antialias=antialias, cuda=cuda)
 
     # Get user configured scheduler (if any), or fall back to default
     # scheduler for dask DataFrame
@@ -46,6 +46,7 @@ def shape_bounds_st_and_axis(df, canvas, glyph):
     y_range = canvas.y_range or y_extents
     x_min, x_max, y_min, y_max = bounds = compute(*(x_range + y_range))
     x_range, y_range = (x_min, x_max), (y_min, y_max)
+    canvas.validate_ranges(x_range, y_range)
 
     width = canvas.plot_width
     height = canvas.plot_height
@@ -66,15 +67,15 @@ glyph_dispatch = Dispatcher()
 
 
 @glyph_dispatch.register(Glyph)
-def default(glyph, df, schema, canvas, summary, cuda=False):
+def default(glyph, df, schema, canvas, summary, *, antialias=False, cuda=False):
     shape, bounds, st, axis = shape_bounds_st_and_axis(df, canvas, glyph)
 
     # Compile functions
-    create, info, append, combine, finalize = \
-        compile_components(summary, schema, glyph, cuda=cuda)
+    create, info, append, combine, finalize, antialias_stage_2 = \
+        compile_components(summary, schema, glyph, antialias=antialias, cuda=cuda)
     x_mapper = canvas.x_axis.mapper
     y_mapper = canvas.y_axis.mapper
-    extend = glyph._build_extend(x_mapper, y_mapper, info, append)
+    extend = glyph._build_extend(x_mapper, y_mapper, info, append, antialias_stage_2)
 
     # Here be dragons
     # Get the dataframe graph
@@ -176,7 +177,7 @@ def default(glyph, df, schema, canvas, summary, cuda=False):
 
 
 @glyph_dispatch.register(LineAxis0)
-def line(glyph, df, schema, canvas, summary, cuda=False):
+def line(glyph, df, schema, canvas, summary, *, antialias=False, cuda=False):
     if cuda:
         from cudf import concat
     else:
@@ -185,11 +186,11 @@ def line(glyph, df, schema, canvas, summary, cuda=False):
     shape, bounds, st, axis = shape_bounds_st_and_axis(df, canvas, glyph)
 
     # Compile functions
-    create, info, append, combine, finalize = \
-        compile_components(summary, schema, glyph, cuda=cuda)
+    create, info, append, combine, finalize, antialias_stage_2 = \
+        compile_components(summary, schema, glyph, antialias=antialias, cuda=cuda)
     x_mapper = canvas.x_axis.mapper
     y_mapper = canvas.y_axis.mapper
-    extend = glyph._build_extend(x_mapper, y_mapper, info, append)
+    extend = glyph._build_extend(x_mapper, y_mapper, info, append, antialias_stage_2)
 
     def chunk(df, df2=None):
         plot_start = True

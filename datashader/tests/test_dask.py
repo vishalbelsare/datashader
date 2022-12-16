@@ -1,4 +1,4 @@
-from __future__ import division, absolute_import
+from __future__ import annotations
 
 import os
 
@@ -27,10 +27,7 @@ from datashader.tests.test_pandas import (
 
 config.set(scheduler='synchronous')
 
-if "DATASHADER_TEST_GPU" in os.environ:
-    test_gpu = bool(int(os.environ["DATASHADER_TEST_GPU"]))
-else:
-    test_gpu = None
+test_gpu = bool(int(os.getenv("DATASHADER_TEST_GPU", 0)))
 
 df_pd = pd.DataFrame({'x': np.array(([0.] * 10 + [1] * 10)),
                       'y': np.array(([0.] * 5 + [1] * 5 + [0] * 5 + [1] * 5)),
@@ -62,7 +59,7 @@ try:
     import cupy
     import dask_cudf
 
-    if test_gpu is False:
+    if not test_gpu:
         # GPU testing disabled even though cudf/cupy are available
         raise ImportError
 
@@ -109,7 +106,7 @@ def floats(n):
 
 
 def test_gpu_dependencies():
-    if test_gpu is True and cudf is None:
+    if test_gpu and cudf is None:
         pytest.fail(
             "cudf, cupy, and/or dask_cudf not available and DATASHADER_TEST_GPU=1"
         )
@@ -317,7 +314,7 @@ def test_categorical_sum_binning(ddf):
                      [nan,  nan, 60.0,  nan]],
                     [[nan, 35.0,  nan,  nan],
                      [nan,  nan,  nan, 85.0]]])
-    
+
     # add an extra category (this will count nans and out of bounds)
     sol = np.append(sol, [[[nan], [nan]],[[nan], [nan]]], axis=2)
 
@@ -702,13 +699,36 @@ def test_line_manual_range(DataFrame, df_kwargs, cvs_kwargs):
 
     agg = cvs.line(ddf, agg=ds.count(), **cvs_kwargs)
 
-    sol = np.array([[0, 0, 1, 0, 1, 0, 0],
-                    [0, 1, 0, 0, 0, 1, 0],
-                    [1, 0, 0, 0, 0, 0, 1],
-                    [1, 1, 1, 1, 1, 1, 1],
-                    [1, 0, 0, 0, 0, 0, 1],
-                    [0, 1, 0, 0, 0, 1, 0],
-                    [0, 0, 1, 0, 1, 0, 0]], dtype='i4')
+    if (ddf.npartitions == 2 and cvs_kwargs.get('axis') == 0 and
+            isinstance(cvs_kwargs['y'], (list, tuple))):
+        # Github issue #1106.
+        # When axis==0 we do not deal with dask splitting up our lines/areas,
+        # so the output has undesirable missing segments.
+        if isinstance(cvs_kwargs['x'], list):
+            sol = np.array([[0, 0, 0, 0, 1, 0, 0],
+                            [0, 0, 0, 0, 0, 1, 0],
+                            [0, 0, 0, 0, 0, 0, 1],
+                            [0, 0, 0, 1, 1, 1, 1],
+                            [1, 0, 0, 0, 0, 0, 0],
+                            [0, 1, 0, 0, 0, 0, 0],
+                            [0, 0, 1, 0, 0, 0, 0]], dtype='i4')
+        else:
+            sol = np.array([[0, 0, 1, 0, 0, 0, 0],
+                            [0, 1, 0, 0, 0, 0, 0],
+                            [1, 0, 0, 0, 0, 0, 0],
+                            [1, 1, 1, 1, 0, 0, 0],
+                            [1, 0, 0, 0, 0, 0, 0],
+                            [0, 1, 0, 0, 0, 0, 0],
+                            [0, 0, 1, 0, 0, 0, 0]], dtype='i4')
+    else:
+        # Ideally all tests would give this solution.
+        sol = np.array([[0, 0, 1, 0, 1, 0, 0],
+                        [0, 1, 0, 0, 0, 1, 0],
+                        [1, 0, 0, 0, 0, 0, 1],
+                        [1, 1, 1, 1, 1, 1, 1],
+                        [1, 0, 0, 0, 0, 0, 1],
+                        [0, 1, 0, 0, 0, 1, 0],
+                        [0, 0, 1, 0, 1, 0, 0]], dtype='i4')
 
     out = xr.DataArray(sol, coords=[lincoords, lincoords],
                        dims=['y', 'x'])
@@ -790,15 +810,41 @@ def test_line_autorange(DataFrame, df_kwargs, cvs_kwargs):
 
     agg = cvs.line(ddf, agg=ds.count(), **cvs_kwargs)
 
-    sol = np.array([[0, 0, 0, 0, 3, 0, 0, 0, 0],
-                    [0, 0, 0, 1, 1, 1, 0, 0, 0],
-                    [0, 0, 1, 0, 1, 0, 1, 0, 0],
-                    [0, 1, 0, 0, 1, 0, 0, 1, 0],
-                    [1, 0, 0, 0, 1, 0, 0, 0, 1],
-                    [0, 1, 0, 0, 1, 0, 0, 1, 0],
-                    [0, 0, 1, 0, 1, 0, 1, 0, 0],
-                    [0, 0, 0, 1, 1, 1, 0, 0, 0],
-                    [0, 0, 0, 0, 3, 0, 0, 0, 0]], dtype='i4')
+    if (ddf.npartitions == 2 and cvs_kwargs.get('axis') == 0 and
+            isinstance(cvs_kwargs['x'], (list, tuple))):
+        # Github issue #1106.
+        # When axis==0 we do not deal with dask splitting up our lines/areas,
+        # so the output has undesirable missing segments.
+        if isinstance(cvs_kwargs['y'], list):
+            sol = np.array([[0, 0, 0, 0, 2, 0, 0, 0, 0],
+                            [0, 0, 0, 1, 0, 1, 0, 0, 0],
+                            [0, 0, 1, 0, 0, 0, 1, 0, 0],
+                            [0, 1, 0, 0, 0, 0, 0, 1, 0],
+                            [1, 0, 0, 0, 1, 0, 0, 0, 1],
+                            [0, 0, 0, 0, 1, 0, 0, 0, 0],
+                            [0, 0, 0, 0, 1, 0, 0, 0, 0],
+                            [0, 0, 0, 0, 1, 0, 0, 0, 0],
+                            [0, 0, 0, 0, 1, 0, 0, 0, 0]], dtype='i4')
+        else:
+            sol = np.array([[0, 0, 0, 0, 3, 0, 0, 0, 0],
+                            [0, 0, 0, 1, 1, 1, 0, 0, 0],
+                            [0, 0, 1, 0, 1, 0, 1, 0, 0],
+                            [0, 1, 0, 0, 1, 0, 0, 1, 0],
+                            [1, 0, 0, 0, 1, 0, 0, 0, 1],
+                            [0, 0, 0, 0, 0, 0, 0, 0, 0],
+                            [0, 0, 0, 0, 0, 0, 0, 0, 0],
+                            [0, 0, 0, 0, 0, 0, 0, 0, 0],
+                            [0, 0, 0, 0, 0, 0, 0, 0, 0]], dtype='i4')
+    else:
+        sol = np.array([[0, 0, 0, 0, 3, 0, 0, 0, 0],
+                        [0, 0, 0, 1, 1, 1, 0, 0, 0],
+                        [0, 0, 1, 0, 1, 0, 1, 0, 0],
+                        [0, 1, 0, 0, 1, 0, 0, 1, 0],
+                        [1, 0, 0, 0, 1, 0, 0, 0, 1],
+                        [0, 1, 0, 0, 1, 0, 0, 1, 0],
+                        [0, 0, 1, 0, 1, 0, 1, 0, 0],
+                        [0, 0, 0, 1, 1, 1, 0, 0, 0],
+                        [0, 0, 0, 0, 3, 0, 0, 0, 0]], dtype='i4')
 
     out = xr.DataArray(sol, coords=[lincoords, lincoords],
                        dims=['y', 'x'])
@@ -933,12 +979,24 @@ def test_area_to_zero_fixedrange(DataFrame, df_kwargs, cvs_kwargs):
 
     agg = cvs.area(ddf, agg=ds.count(), **cvs_kwargs)
 
-    sol = np.array([[0, 1, 1, 0, 0, 0, 0, 0, 0],
-                    [1, 1, 1, 1, 0, 0, 0, 0, 0],
-                    [1, 1, 1, 1, 1, 0, 1, 1, 1],
-                    [0, 0, 0, 0, 0, 0, 1, 1, 1],
-                    [0, 0, 0, 0, 0, 0, 1, 1, 0]],
-                   dtype='i4')
+    if (ddf.npartitions == 2 and cvs_kwargs.get('axis') == 0 and
+            isinstance(cvs_kwargs['x'], (list, tuple))):
+        # Github issue #1106.
+        # When axis==0 we do not deal with dask splitting up our lines/areas,
+        # so the output has undesirable missing segments.
+        sol = np.array([[0, 1, 1, 0, 0, 0, 0, 0, 0],
+                        [1, 1, 1, 0, 0, 0, 0, 0, 0],
+                        [1, 1, 1, 0, 0, 0, 0, 0, 0],
+                        [0, 0, 0, 0, 0, 0, 0, 0, 0],
+                        [0, 0, 0, 0, 0, 0, 0, 0, 0]],
+                       dtype='i4')
+    else:
+        sol = np.array([[0, 1, 1, 0, 0, 0, 0, 0, 0],
+                        [1, 1, 1, 1, 0, 0, 0, 0, 0],
+                        [1, 1, 1, 1, 1, 0, 1, 1, 1],
+                        [0, 0, 0, 0, 0, 0, 1, 1, 1],
+                        [0, 0, 0, 0, 0, 0, 1, 1, 0]],
+                       dtype='i4')
 
     out = xr.DataArray(sol, coords=[lincoords_y, lincoords_x],
                        dims=['y', 'x'])
@@ -1009,14 +1067,28 @@ def test_area_to_zero_autorange(DataFrame, df_kwargs, cvs_kwargs):
     ddf = DataFrame(**df_kwargs)
     agg = cvs.area(ddf, agg=ds.count(), **cvs_kwargs)
 
-    sol = np.array([[0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0],
-                    [0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0],
-                    [0, 0, 1, 1, 1, 0, 0, 0, 1, 1, 1, 0, 0],
-                    [0, 0, 1, 1, 1, 0, 0, 0, 1, 1, 1, 0, 0],
-                    [0, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 0],
-                    [0, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 0],
-                    [1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1]],
-                   dtype='i4')
+    if (ddf.npartitions == 2 and cvs_kwargs.get('axis') == 0 and
+            isinstance(cvs_kwargs['x'], (list, tuple))):
+        # Github issue #1106.
+        # When axis==0 we do not deal with dask splitting up our lines/areas,
+        # so the output has undesirable missing segments.
+        sol = np.array([[0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0],
+                        [0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0],
+                        [0, 0, 1, 1, 0, 0, 0, 0, 1, 1, 0, 0, 0],
+                        [0, 0, 1, 1, 0, 0, 0, 0, 1, 1, 0, 0, 0],
+                        [0, 1, 1, 1, 0, 0, 0, 1, 1, 1, 0, 0, 0],
+                        [0, 1, 1, 1, 0, 0, 0, 1, 1, 1, 0, 0, 0],
+                        [1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 0]],
+                       dtype='i4')
+    else:
+        sol = np.array([[0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0],
+                        [0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0],
+                        [0, 0, 1, 1, 1, 0, 0, 0, 1, 1, 1, 0, 0],
+                        [0, 0, 1, 1, 1, 0, 0, 0, 1, 1, 1, 0, 0],
+                        [0, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 0],
+                        [0, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 0],
+                        [1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1]],
+                       dtype='i4')
 
     out = xr.DataArray(sol, coords=[lincoords_y, lincoords_x],
                        dims=['y', 'x'])
@@ -1072,14 +1144,28 @@ def test_area_to_zero_autorange_gap(DataFrame, df_kwargs, cvs_kwargs):
 
     agg = cvs.area(ddf, agg=ds.count(), **cvs_kwargs)
 
-    sol = np.array([[0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                    [0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0],
-                    [0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0],
-                    [1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1],
-                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0],
-                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0],
-                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0]],
-                   dtype='i4')
+    if (ddf.npartitions == 2 and cvs_kwargs.get('axis') == 0 and
+            isinstance(cvs_kwargs['x'], (list, tuple))):
+        # Github issue #1106.
+        # When axis==0 we do not deal with dask splitting up our lines/areas,
+        # so the output has undesirable missing segments.
+        sol = np.array([[0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                        [0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                        [0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                        [1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]],
+                       dtype='i4')
+    else:
+        sol = np.array([[0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                        [0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0],
+                        [0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0],
+                        [1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1],
+                        [0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0],
+                        [0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0],
+                        [0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0]],
+                       dtype='i4')
 
     out = xr.DataArray(sol, coords=[lincoords_y, lincoords_x],
                        dims=['y', 'x'])
@@ -1161,14 +1247,28 @@ def test_area_to_line_autorange(DataFrame, df_kwargs, cvs_kwargs):
     ddf = DataFrame(**df_kwargs)
     agg = cvs.area(ddf, agg=ds.count(), **cvs_kwargs)
 
-    sol = np.array([[0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0],
-                    [0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0],
-                    [0, 0, 1, 1, 1, 0, 0, 0, 1, 1, 1, 0, 0],
-                    [0, 0, 1, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0],
-                    [0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1, 0],
-                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]],
-                   dtype='i4')
+    if (ddf.npartitions == 2 and cvs_kwargs.get('axis') == 0 and
+            isinstance(cvs_kwargs['x'], (list, tuple))):
+        # Github issue #1106.
+        # When axis==0 we do not deal with dask splitting up our lines/areas,
+        # so the output has undesirable missing segments.
+        sol = np.array([[0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0],
+                        [0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0],
+                        [0, 0, 1, 1, 0, 0, 0, 0, 1, 1, 0, 0, 0],
+                        [0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0],
+                        [0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0],
+                        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]],
+                       dtype='i4')
+    else:
+        sol = np.array([[0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0],
+                        [0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0],
+                        [0, 0, 1, 1, 1, 0, 0, 0, 1, 1, 1, 0, 0],
+                        [0, 0, 1, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0],
+                        [0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1, 0],
+                        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]],
+                       dtype='i4')
 
     out = xr.DataArray(sol, coords=[lincoords_y, lincoords_x],
                        dims=['y', 'x'])
@@ -1236,14 +1336,28 @@ def test_area_to_line_autorange_gap(DataFrame, df_kwargs, cvs_kwargs):
     # the fill.  So we expect the y=0 line to not be filled.
     agg = cvs.area(ddf, agg=ds.count(), **cvs_kwargs)
 
-    sol = np.array([[0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                    [0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0],
-                    [0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0],
-                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0],
-                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0],
-                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0]],
-                   dtype='i4')
+    if (ddf.npartitions == 2 and cvs_kwargs.get('axis') == 0 and
+            isinstance(cvs_kwargs['x'], (list, tuple))):
+        # Github issue #1106.
+        # When axis==0 we do not deal with dask splitting up our lines/areas,
+        # so the output has undesirable missing segments.
+        sol = np.array([[0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                        [0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                        [0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]],
+                       dtype='i4')
+    else:
+        sol = np.array([[0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                        [0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0],
+                        [0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0],
+                        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                        [0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0],
+                        [0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0],
+                        [0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0]],
+                       dtype='i4')
 
     out = xr.DataArray(sol, coords=[lincoords_y, lincoords_x],
                        dims=['y', 'x'])
@@ -1264,10 +1378,10 @@ def test_trimesh_no_double_edge():
     cvs = ds.Canvas(plot_width=20, plot_height=20, x_range=(0, 5), y_range=(0, 5))
     agg = cvs.trimesh(verts, tris)
     sol = np.array([
-        [0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
-        [0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 0],
-        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 2, 2, 0],
-        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 2, 2],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 2, 2, 2],
         [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
     ], dtype='i4')
     np.testing.assert_array_equal(np.flipud(agg.fillna(0).astype('i4').values)[:5], sol)
@@ -1313,11 +1427,46 @@ def test_trimesh_dask_partitions(npartitions):
 
     agg = cvs.trimesh(verts, tris, mesh)
     sol = np.array([
-        [0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
-        [0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 0],
-        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 2, 2, 0],
-        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 2, 2],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 2, 2, 2],
         [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
     ], dtype='i4')
     np.testing.assert_array_equal(
         np.flipud(agg.fillna(0).astype('i4').values)[:5], sol)
+
+
+@pytest.mark.parametrize('ddf', ddfs)
+@pytest.mark.parametrize('reduction,dtype,aa_dtype', [
+    (ds.any(), bool, np.float32),
+    (ds.count(), np.uint32, np.float32),
+    (ds.max("f64"), np.float64, np.float64),
+    (ds.min("f64"), np.float64, np.float64),
+    (ds.sum("f64"), np.float64, np.float64),
+])
+def test_combine_dtype(ddf, reduction, dtype, aa_dtype):
+    if dask_cudf and isinstance(ddf, dask_cudf.DataFrame):
+        pytest.skip("antialiased lines not supported with cudf")
+
+    cvs = ds.Canvas(plot_width=10, plot_height=10)
+
+    # Non-antialiased lines
+    agg = cvs.line(ddf, 'x', 'y', line_width=0, agg=reduction)
+    assert agg.dtype == dtype
+
+    # Antialiased lines
+    agg = cvs.line(ddf, 'x', 'y', line_width=1, agg=reduction)
+    assert agg.dtype == aa_dtype
+
+
+@pytest.mark.parametrize('ddf', ddfs)
+@pytest.mark.parametrize('canvas', [
+    ds.Canvas(x_axis_type='log'),
+    ds.Canvas(x_axis_type='log', x_range=(0, 1)),
+    ds.Canvas(y_axis_type='log'),
+    ds.Canvas(y_axis_type='log', y_range=(0, 1)),
+])
+def test_log_axis_not_positive(ddf, canvas):
+    with pytest.raises(ValueError, match='Range values must be >0 for logarithmic axes'):
+        canvas.line(ddf, 'x', 'y')
